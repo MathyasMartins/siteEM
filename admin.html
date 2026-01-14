@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Painel de administração do site romântico">
+  <meta name="theme-color" content="#e91e63">
+  
+  <title>Administração - Nosso Amor ❤️</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>❤️</text></svg>">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <a href="/" class="logo">💕 Nosso Amor</a>
+        <nav>
+          <a href="/">Início</a>
+          <a href="galeria.html">Galeria</a>
+          <a href="admin.html" class="active">Admin</a>
+          <button class="theme-toggle" id="themeToggle" title="Alternar tema">🌙</button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Login Section (Mostrado se não estiver logado) -->
+    <section id="loginSection" class="hero" style="display: none;">
+      <h1>Acesso Restrito 🔐</h1>
+      <p>Faça login para acessar a administração</p>
+      
+      <form id="loginForm" style="max-width: 400px; margin: var(--spacing-lg) auto;">
+        <div class="form-group">
+          <label for="adminPassword">Senha de Administrador</label>
+          <input 
+            type="password" 
+            id="adminPassword" 
+            placeholder="Digite sua senha"
+            required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">Entrar</button>
+      </form>
+    </section>
+
+    <!-- Admin Dashboard (Mostrado se estiver logado) -->
+    <section id="adminDashboard" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+        <h1>Painel de Administração ⚙️</h1>
+        <button id="logoutBtn" class="btn btn-outline">Sair</button>
+      </div>
+
+      <!-- Configurações -->
+      <div class="admin-section">
+        <h3>⚙️ Configurações</h3>
+        <form id="configForm">
+          <div class="form-group">
+            <label for="coupleNameInput">Nome do Casal</label>
+            <input 
+              type="text" 
+              id="coupleNameInput" 
+              placeholder="Ex: João e Maria"
+              required>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="startDateInput">Início do Relacionamento</label>
+              <input 
+                type="date" 
+                id="startDateInput"
+                required>
+            </div>
+            <div class="form-group">
+              <label for="lastMeetInput">Última Vez que nos Vimos</label>
+              <input 
+                type="date" 
+                id="lastMeetInput"
+                required>
+            </div>
+            <div class="form-group">
+              <label for="nextMeetInput">Próximo Encontro</label>
+              <input 
+                type="date" 
+                id="nextMeetInput"
+                required>
+            </div>
+          </div>
+          
+          <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+        </form>
+      </div>
+
+      <!-- Upload de Fotos -->
+      <div class="admin-section">
+        <h3>📷 Gerenciar Fotos</h3>
+        <form id="uploadForm">
+          <div class="form-group">
+            <label for="photoInput">Selecionar Foto</label>
+            <input 
+              type="file" 
+              id="photoInput" 
+              accept="image/*"
+              required>
+            <small style="color: var(--text-secondary);">Formatos: JPG, PNG, GIF, WebP</small>
+          </div>
+          <button type="submit" class="btn btn-primary">Enviar Foto</button>
+        </form>
+
+        <h4 style="margin-top: var(--spacing-lg); margin-bottom: var(--spacing-md);">Fotos Atuais</h4>
+        <div class="admin-list" id="photosList">
+          <!-- Fotos serão inseridas aqui via JavaScript -->
+        </div>
+      </div>
+
+      <!-- Gerenciar Recadinhos -->
+      <div class="admin-section">
+        <h3>💌 Gerenciar Recadinhos</h3>
+        
+        <h4 style="margin-bottom: var(--spacing-md);">Adicionar Recadinho Meu</h4>
+        <form id="addRecadinhoForm">
+          <div class="form-group">
+            <label for="myRecadinhoInput">Mensagem</label>
+            <textarea 
+              id="myRecadinhoInput" 
+              placeholder="Escreva algo especial..."
+              maxlength="200"
+              required></textarea>
+            <small style="color: var(--text-secondary);">Máximo 200 caracteres</small>
+          </div>
+          <button type="submit" class="btn btn-primary">Adicionar Recadinho</button>
+        </form>
+
+        <h4 style="margin-top: var(--spacing-lg); margin-bottom: var(--spacing-md);">Recadinhos Pendentes de Aprovação</h4>
+        <div class="admin-list" id="pendingRecadinhosList">
+          <!-- Recadinhos pendentes serão inseridos aqui -->
+        </div>
+
+        <h4 style="margin-top: var(--spacing-lg); margin-bottom: var(--spacing-md);">Todos os Recadinhos</h4>
+        <div class="admin-list" id="allRecadinhosList">
+          <!-- Todos os recadinhos serão inseridos aqui -->
+        </div>
+      </div>
+
+      <!-- Agenda -->
+      <div class="admin-section">
+        <h3>🗓️ Agenda</h3>
+        
+        <h4 style="margin-bottom: var(--spacing-md);">Adicionar Data Especial</h4>
+        <form id="addAgendaForm">
+          <div class="form-group">
+            <label for="agendaTitleInput">Título</label>
+            <input 
+              type="text" 
+              id="agendaTitleInput" 
+              placeholder="Ex: Aniversário"
+              required>
+          </div>
+          <div class="form-group">
+            <label for="agendaDateInput">Data</label>
+            <input 
+              type="date" 
+              id="agendaDateInput"
+              required>
+          </div>
+          <div class="form-group">
+            <label for="agendaMessageInput">Mensagem (Opcional)</label>
+            <textarea 
+              id="agendaMessageInput" 
+              placeholder="Mensagem especial para este dia..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Adicionar à Agenda</button>
+        </form>
+
+        <h4 style="margin-top: var(--spacing-lg); margin-bottom: var(--spacing-md);">Datas Especiais</h4>
+        <div class="admin-list" id="agendaList">
+          <!-- Eventos da agenda serão inseridos aqui -->
+        </div>
+      </div>
+
+      <!-- Backup e Restauração -->
+      <div class="admin-section">
+        <h3>💾 Backup e Restauração</h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+          <div>
+            <h4 style="margin-bottom: var(--spacing-md);">Exportar Dados</h4>
+            <p style="margin-bottom: var(--spacing-md); color: var(--text-secondary);">
+              Baixe um arquivo JSON com todos os dados do site.
+            </p>
+            <button id="exportBtn" class="btn btn-secondary btn-large" style="width: 100%;">
+              Exportar JSON 📥
+            </button>
+          </div>
+          
+          <div>
+            <h4 style="margin-bottom: var(--spacing-md);">Importar Dados</h4>
+            <p style="margin-bottom: var(--spacing-md); color: var(--text-secondary);">
+              Restaure dados de um arquivo JSON anterior.
+            </p>
+            <input 
+              type="file" 
+              id="importFile" 
+              accept=".json"
+              style="display: none;">
+            <button id="importBtn" class="btn btn-secondary btn-large" style="width: 100%;">
+              Importar JSON 📤
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Surpresa -->
+      <div class="admin-section">
+        <h3>🎁 Surpresa</h3>
+        <p style="margin-bottom: var(--spacing-md); color: var(--text-secondary);">
+          Clique no botão abaixo para abrir a tela de surpresa.
+        </p>
+        <a href="surpresa.html" class="btn btn-primary btn-large">Abrir Surpresa 🎁</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2024 Nosso Amor. Feito com ❤️ para você.</p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="script.js"></script>
+  <script src="pages/admin.js"></script>
+</body>
+</html>

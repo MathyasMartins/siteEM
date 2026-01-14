@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Uma surpresa especial para você">
+  <meta name="theme-color" content="#e91e63">
+  
+  <title>Surpresa Especial ❤️</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>❤️</text></svg>">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  
+  <style>
+    /* Estilos específicos da página de surpresa */
+    body {
+      background: linear-gradient(135deg, #e91e63 0%, #ff6b9d 100%);
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      display: none;
+    }
+
+    footer {
+      display: none;
+    }
+
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background-color: #fff;
+      pointer-events: none;
+      animation: fall 3s linear forwards;
+    }
+
+    @keyframes fall {
+      to {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    .floating-heart {
+      position: fixed;
+      font-size: 2rem;
+      animation: float 4s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0) translateX(0);
+      }
+      50% {
+        transform: translateY(-20px) translateX(10px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Surpresa Container -->
+  <div class="surprise-container">
+    <div class="surprise-content">
+      <h1 id="surpriseTitle">Surpresa Especial! 🎁</h1>
+      <p id="surpriseMessage">
+        Você é o amor da minha vida. 
+        <span class="heart-animation">❤️</span>
+        Cada dia ao seu lado é uma bênção.
+      </p>
+      <p style="margin-top: var(--spacing-2xl); font-size: var(--font-size-lg);">
+        Te amo muito! 
+        <span class="heart-animation">💕</span>
+      </p>
+      <div style="margin-top: var(--spacing-2xl);">
+        <a href="/" class="btn btn-secondary btn-large">Voltar ao Início</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="script.js"></script>
+  <script src="pages/surpresa.js"></script>
+</body>
+</html>
