@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Site romântico para celebrar nosso amor ❤️">
+  <meta name="theme-color" content="#e91e63">
+  
+  <title>Nossa História ❤️</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>❤️</text></svg>">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><text y='150' font-size='150'>❤️</text></svg>">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <a href="/" class="logo">💕 Nossa História</a>
+        <nav>
+          <a href="/" class="active">Início</a>
+          <a href="galeria.html">Galeria</a>
+          <a href="admin.html">Admin</a>
+          <button class="theme-toggle" id="themeToggle" title="Alternar tema">🌙</button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+      <h1 id="coupleNameHero">Carregando...</h1>
+      <p>Uma celebração do nosso amor ❤️</p>
+    </section>
+
+    <!-- Contadores -->
+    <section class="counters">
+      <div class="counter">
+        <div class="counter-value" id="togetherDays">0</div>
+        <div class="counter-label">Estamos juntos há</div>
+        <div id="togetherText" style="font-size: 0.9rem; color: var(--text-secondary);">Carregando...</div>
+      </div>
+      <div class="counter">
+        <div class="counter-value" id="apartDays">0</div>
+        <div class="counter-label">Sem nos ver há</div>
+        <div id="apartText" style="font-size: 0.9rem; color: var(--text-secondary);">Carregando...</div>
+      </div>
+      <div class="counter">
+        <div class="counter-value" id="nextMeetingDays">0</div>
+        <div class="counter-label">Faltam para nos vermos</div>
+        <div id="nextMeetingText" style="font-size: 0.9rem; color: var(--text-secondary);">Carregando...</div>
+      </div>
+    </section>
+
+    <!-- Slideshow -->
+    <section>
+      <h2 class="text-center">Nossos Momentos 📷</h2>
+      <div class="slideshow">
+        <div class="slideshow-container" id="slideshowContainer">
+          <!-- Imagens serão inseridas aqui via JavaScript -->
+        </div>
+        <div class="slideshow-nav" id="slideshowNav">
+          <!-- Dots serão inseridos aqui via JavaScript -->
+        </div>
+      </div>
+      <div class="text-center mt-lg mb-lg">
+        <a href="galeria.html" class="btn btn-primary">Ver Galeria Completa 🖼️</a>
+      </div>
+    </section>
+
+    <!-- Recadinhos -->
+    <section>
+      <h2 class="text-center">Recadinhos do Coração 💌</h2>
+      
+      <!-- Formulário para enviar recadinho -->
+      <div class="recadinho-form">
+        <h3>Deixe um Recadinho</h3>
+        <form id="recadinhoForm">
+          <div class="form-group">
+            <label for="recadinhoMessage">Sua Mensagem (máx. 200 caracteres)</label>
+            <textarea 
+              id="recadinhoMessage" 
+              placeholder="Escreva algo especial..."
+              maxlength="200"
+              required></textarea>
+            <small id="charCount" style="color: var(--text-secondary);">0/200</small>
+          </div>
+          <button type="submit" class="btn btn-primary btn-large">Enviar Recadinho ❤️</button>
+        </form>
+      </div>
+
+      <!-- Mural de Recadinhos -->
+      <div class="recadinhos-container" id="recadinhosContainer">
+        <!-- Recadinhos serão inseridos aqui via JavaScript -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2024 Nosso Amor. Feito com ❤️ para você.</p>
+    <p style="font-size: var(--font-size-sm); margin-top: var(--spacing-md);">
+      <a href="admin.html" style="color: var(--text-secondary);">Administração</a>
+    </p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="script.js"></script>
+  <script src="pages/index.js"></script>
+</body>
+</html>
