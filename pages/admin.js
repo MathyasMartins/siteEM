@@ -300,48 +300,39 @@ async function deleteFoto(id) {
 // ============================================================================
 // RECADINHOS
 // ============================================================================
+
 async function loadRecadinhosSection() {
   const form = document.getElementById('addRecadinhoForm');
   if (!form) return;
-
-  // Evita múltiplos listeners
-  if (form.dataset.listenerAdded === "true") return;
-  form.dataset.listenerAdded = "true";
-
+  
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-
+    
     const message = document.getElementById('myRecadinhoInput').value.trim();
-
+    
     if (!message) {
       showNotification('Por favor, escreva uma mensagem', 'warning');
       return;
     }
-
+    
     const submitBtn = form.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Adicionando...';
-
+    
     const result = await supabase.insertRecadinho('Eu', message);
-
+    
     submitBtn.disabled = false;
     submitBtn.textContent = 'Adicionar Recadinho';
-
+    
     if (result) {
       showNotification('Recadinho adicionado com sucesso!', 'success');
       document.getElementById('myRecadinhoInput').value = '';
-
-      // ❌ REMOVIDO o loadRecadinhosSection()
-      // Aqui você deve chamar apenas a função que recarrega os recados
-      if (typeof carregarRecadinhos === "function") {
-        await carregarRecadinhos();
-      }
-
+      await loadRecadinhosSection();
     } else {
       showNotification('Erro ao adicionar recadinho', 'error');
     }
   });
-}
+
   
   // Carregar recadinhos pendentes
   const pendingRecadinhos = await supabase.getRecadinhos(false);
@@ -402,7 +393,7 @@ async function loadRecadinhosSection() {
       });
     }
   }
-
+}
 
 async function approveRecadinho(id) {
   const result = await supabase.updateRecadinho(id, { aprovado: true });
