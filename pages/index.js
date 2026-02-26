@@ -15,24 +15,24 @@ let recadinhos = [];
 document.addEventListener('DOMContentLoaded', async () => {
   // Aplicar tema
   updateThemeToggle();
-  
+
   // Carregar dados
   await loadConfig();
   await loadFotos();
   await loadRecadinhos();
-  
+
   // Iniciar slideshow
   if (fotos.length > 0) {
     startSlideshow();
   }
-  
+
   // Atualizar contadores a cada minuto
   updateCounters();
   setInterval(updateCounters, 60000);
-  
+
   // Configurar formulário de recadinho
   setupRecadinhoForm();
-  
+
   // Configurar theme toggle
   document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 });
@@ -43,14 +43,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadConfig() {
   const config = await supabase.getConfig();
-  
+
   if (config) {
     // Atualizar nome do casal
     const coupleNameHero = document.getElementById('coupleNameHero');
     if (coupleNameHero) {
       coupleNameHero.textContent = config.nome_casal;
     }
-    
+
     // Salvar datas para cálculos
     window.config = config;
   }
@@ -62,7 +62,7 @@ async function loadConfig() {
 
 function updateCounters() {
   if (!window.config) return;
-  
+
   const config = window.config;
   const agora = new Date();
 
@@ -70,7 +70,7 @@ function updateCounters() {
   // Contador: Estamos juntos há
   // ================================
   const togetherDiff = DateUtils.calculateDifference(config.inicio_relacionamento);
-  
+
   // Dias continuam baseados na data configurada
   document.getElementById('togetherDays').textContent = togetherDiff.days;
 
@@ -91,19 +91,27 @@ function updateCounters() {
   document.getElementById('apartText').textContent =
     `${apartDiff.hours}h ${apartDiff.minutes}m`;
 
-
   // ================================
   // Contador: Faltam para nos vermos
   // ================================
-  const nextMeetingDiff = DateUtils.calculateDifference(new Date(), config.proximo_encontro);
 
-  if (nextMeetingDiff.days < 0) {
+  // força o encontro para o FINAL do dia
+  const encontro = new Date(config.proximo_encontro + "T23:59:59");
+
+  const diff = encontro - agora;
+
+  if (diff <= 0) {
     document.getElementById('nextMeetingDays').textContent = '0';
-    document.getElementById('nextMeetingText').textContent = 'Já chegou!';
+    document.getElementById('nextMeetingText').textContent = 'É hoje ❤️';
   } else {
-    document.getElementById('nextMeetingDays').textContent = nextMeetingDiff.days;
+
+    const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const horas = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutos = Math.floor((diff / (1000 * 60)) % 60);
+
+    document.getElementById('nextMeetingDays').textContent = dias;
     document.getElementById('nextMeetingText').textContent =
-      `${nextMeetingDiff.hours}h ${nextMeetingDiff.minutes}m`;
+      `${horas}h ${minutos.toString().padStart(2, '0')}m`;
   }
 }
 
@@ -113,7 +121,7 @@ function updateCounters() {
 
 async function loadFotos() {
   fotos = await supabase.getFotos();
-  
+
   if (fotos.length === 0) {
     const slideshowContainer = document.getElementById('slideshowContainer');
     if (slideshowContainer) {
@@ -135,7 +143,7 @@ async function loadFotos() {
     }
     return;
   }
-  
+
   // Renderizar slideshow
   renderSlideshow();
 }
@@ -143,13 +151,13 @@ async function loadFotos() {
 function renderSlideshow() {
   const container = document.getElementById('slideshowContainer');
   const nav = document.getElementById('slideshowNav');
-  
+
   if (!container || !nav) return;
-  
+
   // Limpar container
   container.innerHTML = '';
   nav.innerHTML = '';
-  
+
   // Adicionar imagens
   fotos.forEach((foto, index) => {
     const img = document.createElement('img');
@@ -158,7 +166,7 @@ function renderSlideshow() {
     img.className = 'slideshow-image';
     if (index === 0) img.classList.add('active');
     container.appendChild(img);
-    
+
     // Adicionar dot
     const dot = document.createElement('button');
     dot.className = 'slideshow-dot';
@@ -170,7 +178,7 @@ function renderSlideshow() {
 
 function startSlideshow() {
   if (fotos.length <= 1) return;
-  
+
   setInterval(() => {
     currentSlideIndex = (currentSlideIndex + 1) % fotos.length;
     showSlide(currentSlideIndex);
@@ -180,10 +188,10 @@ function startSlideshow() {
 function showSlide(index) {
   const images = document.querySelectorAll('.slideshow-image');
   const dots = document.querySelectorAll('.slideshow-dot');
-  
+
   images.forEach(img => img.classList.remove('active'));
   dots.forEach(dot => dot.classList.remove('active'));
-  
+
   if (images[index]) {
     images[index].classList.add('active');
   }
@@ -209,9 +217,9 @@ async function loadRecadinhos() {
 function renderRecadinhos() {
   const container = document.getElementById('recadinhosContainer');
   if (!container) return;
-  
+
   container.innerHTML = '';
-  
+
   if (recadinhos.length === 0) {
     container.innerHTML = `
       <div style="grid-column: 1 / -1; text-align: center; padding: var(--spacing-lg);">
@@ -220,7 +228,7 @@ function renderRecadinhos() {
     `;
     return;
   }
-  
+
   recadinhos.forEach(recadinho => {
     const card = document.createElement('div');
     card.className = 'recadinho-card';
@@ -246,36 +254,36 @@ function setupRecadinhoForm() {
   const form = document.getElementById('recadinhoForm');
   const textarea = document.getElementById('recadinhoMessage');
   const charCount = document.getElementById('charCount');
-  
+
   if (!form) return;
-  
+
   // Atualizar contador de caracteres
   if (textarea) {
     textarea.addEventListener('input', () => {
       charCount.textContent = `${textarea.value.length}/200`;
     });
   }
-  
+
   // Enviar formulário
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const message = textarea.value.trim();
-    
+
     if (!message) {
       showNotification('Por favor, escreva uma mensagem', 'warning');
       return;
     }
-    
+
     // Desabilitar botão
     const submitBtn = form.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Enviando...';
-    
+
     try {
       // Inserir recadinho
       const result = await supabase.insertRecadinho('Minha Princesa', message);
-      
+
       if (result) {
         showNotification('Recadinho enviado com sucesso! Aguardando aprovação.', 'success');
         textarea.value = '';
