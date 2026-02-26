@@ -64,28 +64,45 @@ function updateCounters() {
   if (!window.config) return;
   
   const config = window.config;
-  
+  const agora = new Date();
+
+  // ================================
   // Contador: Estamos juntos há
+  // ================================
   const togetherDiff = DateUtils.calculateDifference(config.inicio_relacionamento);
+  
+  // Dias continuam baseados na data configurada
   document.getElementById('togetherDays').textContent = togetherDiff.days;
-  document.getElementById('togetherText').textContent = 
-    `${togetherDiff.hours}h ${togetherDiff.minutes}m`;
-  
+
+  // 🔥 Hora atual real do sistema
+  const horasAtuais = agora.getHours();
+  const minutosAtuais = agora.getMinutes().toString().padStart(2, '0');
+
+  document.getElementById('togetherText').textContent =
+    `${horasAtuais}h ${minutosAtuais}m`;
+
+
+  // ================================
   // Contador: Sem nos ver há
+  // ================================
   const apartDiff = DateUtils.calculateDifference(config.ultima_vez_vistos);
+
   document.getElementById('apartDays').textContent = apartDiff.days;
-  document.getElementById('apartText').textContent = 
+  document.getElementById('apartText').textContent =
     `${apartDiff.hours}h ${apartDiff.minutes}m`;
-  
+
+
+  // ================================
   // Contador: Faltam para nos vermos
+  // ================================
   const nextMeetingDiff = DateUtils.calculateDifference(new Date(), config.proximo_encontro);
+
   if (nextMeetingDiff.days < 0) {
-    // Data passou
     document.getElementById('nextMeetingDays').textContent = '0';
     document.getElementById('nextMeetingText').textContent = 'Já chegou!';
   } else {
     document.getElementById('nextMeetingDays').textContent = nextMeetingDiff.days;
-    document.getElementById('nextMeetingText').textContent = 
+    document.getElementById('nextMeetingText').textContent =
       `${nextMeetingDiff.hours}h ${nextMeetingDiff.minutes}m`;
   }
 }
@@ -257,7 +274,7 @@ function setupRecadinhoForm() {
     
     try {
       // Inserir recadinho
-      const result = await supabase.insertRecadinho('Amor', message);
+      const result = await supabase.insertRecadinho('Minha Princesa', message);
       
       if (result) {
         showNotification('Recadinho enviado com sucesso! Aguardando aprovação.', 'success');

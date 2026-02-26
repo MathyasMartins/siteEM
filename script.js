@@ -49,26 +49,28 @@ class SupabaseAPI {
       return null;
     }
   }
+// Atualizar configurações
+async updateConfig(updates) {
+  try {
+    const response = await fetch(
+      `${this.url}/rest/v1/config?id=eq.1`,
+      {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify(updates)
+      }
+    );
 
-  // Atualizar configurações
-  async updateConfig(updates) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/config?id=eq.1`,
-        {
-          method: 'PATCH',
-          headers: this.getHeaders(),
-          body: JSON.stringify(updates)
-        }
-      );
-      if (!response.ok) throw new Error(`Erro ao atualizar config: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error('Erro ao atualizar config:', error);
-      return null;
+    if (!response.ok) {
+      throw new Error(`Erro ao atualizar config: ${response.status}`);
     }
-  }
+    return true;
 
+  } catch (error) {
+    console.error('Erro ao atualizar config:', error);
+    return false;
+  }
+}
   // Buscar recadinhos
   async getRecadinhos(aprovadosApenas = true) {
   try {
@@ -100,27 +102,31 @@ class SupabaseAPI {
 }
 
   // Inserir recadinho
-  async insertRecadinho(autor, mensagem) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/recadinhos`,
-        {
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify({
-            autor: autor,
-            mensagem: mensagem,
-            aprovado: false
-          })
-        }
-      );
-      if (!response.ok) throw new Error(`Erro ao inserir recadinho: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error('Erro ao inserir recadinho:', error);
-      return null;
+async insertRecadinho(autor, mensagem) {
+  try {
+    const response = await fetch(
+      `${this.url}/rest/v1/recadinhos`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          autor: autor,
+          mensagem: mensagem,
+          aprovado: false
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Erro ao inserir recadinho: ${response.status}`);
     }
+    return true;
+
+  } catch (error) {
+    console.error('Erro ao inserir recadinho:', error);
+    return false;
   }
+}
 
   // Atualizar recadinho
   async updateRecadinho(id, updates) {
@@ -174,24 +180,30 @@ class SupabaseAPI {
     }
   }
 
-  // Inserir foto
-  async insertFoto(url) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/fotos`,
-        {
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify({ url: url })
-        }
-      );
-      if (!response.ok) throw new Error(`Erro ao inserir foto: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error('Erro ao inserir foto:', error);
-      return null;
+ // Inserir foto
+async insertFoto(url) {
+  try {
+    const response = await fetch(
+      `${this.url}/rest/v1/fotos`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ url: url })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Erro ao inserir foto: ${response.status}`);
     }
+
+    // 🔥 Não usa response.json()
+    return true;
+
+  } catch (error) {
+    console.error('Erro ao inserir foto:', error);
+    return false;
   }
+}
 
   // Deletar foto
   async deleteFoto(id) {
@@ -225,29 +237,36 @@ class SupabaseAPI {
       return [];
     }
   }
+// Inserir evento na agenda
+async insertAgenda(titulo, data, mensagem) {
+  try {
+    const response = await fetch(
+      `${this.url}/rest/v1/agenda`,
+      {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          titulo: titulo,
+          data: data,
+          mensagem: mensagem
+        })
+      }
+    );
 
-  // Inserir evento na agenda
-  async insertAgenda(titulo, data, mensagem) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/agenda`,
-        {
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify({
-            titulo: titulo,
-            data: data,
-            mensagem: mensagem
-          })
-        }
-      );
-      if (!response.ok) throw new Error(`Erro ao inserir agenda: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error('Erro ao inserir agenda:', error);
-      return null;
+    if (!response.ok) {
+      throw new Error(`Erro ao inserir agenda: ${response.status}`);
     }
+
+    return await response.json();
+
+  } catch (error) {
+    console.error('Erro ao inserir agenda:', error);
+    return null;
   }
+}
 
   // Deletar evento da agenda
   async deleteAgenda(id) {

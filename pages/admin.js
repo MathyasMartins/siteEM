@@ -304,35 +304,44 @@ async function deleteFoto(id) {
 async function loadRecadinhosSection() {
   const form = document.getElementById('addRecadinhoForm');
   if (!form) return;
-  
+
+  // Evita múltiplos listeners
+  if (form.dataset.listenerAdded === "true") return;
+  form.dataset.listenerAdded = "true";
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const message = document.getElementById('myRecadinhoInput').value.trim();
-    
+
     if (!message) {
       showNotification('Por favor, escreva uma mensagem', 'warning');
       return;
     }
-    
+
     const submitBtn = form.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Adicionando...';
-    
-    const result = await supabase.insertRecadinho('Eu', message);
-    
+
+    const result = await supabase.insertRecadinho('Vida', message);
+
     submitBtn.disabled = false;
     submitBtn.textContent = 'Adicionar Recadinho';
-    
+
     if (result) {
       showNotification('Recadinho adicionado com sucesso!', 'success');
       document.getElementById('myRecadinhoInput').value = '';
-      await loadRecadinhosSection();
+
+      // ❌ REMOVIDO o loadRecadinhosSection()
+      // Aqui você deve chamar apenas a função que recarrega os recados
+      if (typeof carregarRecadinhos === "function") {
+        await carregarRecadinhos();
+      }
+
     } else {
       showNotification('Erro ao adicionar recadinho', 'error');
     }
   });
-
   
   // Carregar recadinhos pendentes
   const pendingRecadinhos = await supabase.getRecadinhos(false);
@@ -426,10 +435,13 @@ function escapeHtml(text) {
 // ============================================================================
 // AGENDA
 // ============================================================================
-
 async function loadAgendaSection() {
   const form = document.getElementById('addAgendaForm');
   if (!form) return;
+
+  // 🚀 evita múltiplos listeners
+  if (form.dataset.listenerAdded === "true") return;
+  form.dataset.listenerAdded = "true";
   
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -454,10 +466,12 @@ async function loadAgendaSection() {
     
     if (result) {
       showNotification('Data adicionada à agenda!', 'success');
-      document.getElementById('agendaTitleInput').value = '';
-      document.getElementById('agendaDateInput').value = '';
-      document.getElementById('agendaMessageInput').value = '';
-      await loadAgendaSection();
+      form.reset();
+      
+      if (typeof carregarAgenda === "function") {
+        await carregarAgenda();
+      }
+
     } else {
       showNotification('Erro ao adicionar à agenda', 'error');
     }
@@ -470,17 +484,29 @@ async function loadAgendaSection() {
   if (agendaList) {
     agendaList.innerHTML = '';
     
-    if (agenda.length === 0) {
+    if (!agenda || agenda.length === 0) {
       agendaList.innerHTML = '<p style="color: var(--text-secondary);">Nenhuma data especial adicionada.</p>';
     } else {
       agenda.forEach(evento => {
+
+        // 🔥 Formatação segura SEM usar Date()
+        let dataFormatada = '';
+        if (evento.data) {
+          const apenasData = evento.data.split('T')[0]; // remove horário se vier
+          const partes = apenasData.split('-');
+
+          if (partes.length === 3) {
+            dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
+          }
+        }
+
         const item = document.createElement('div');
         item.className = 'admin-item';
         item.innerHTML = `
           <div style="flex: 1;">
             <p style="margin: 0; color: var(--text-primary); font-weight: 600;">${evento.titulo}</p>
             <p style="margin: var(--spacing-xs) 0 0 0; color: var(--text-secondary); font-size: var(--font-size-sm);">
-              ${DateUtils.formatDate(evento.data)}
+              ${dataFormatada}
               ${evento.mensagem ? `<br>${evento.mensagem}` : ''}
             </p>
           </div>
