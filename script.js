@@ -71,19 +71,33 @@ class SupabaseAPI {
 
   // Buscar recadinhos
   async getRecadinhos(aprovadosApenas = true) {
-    try {
-      const filter = aprovadosApenas ? '?aprovado=eq.true' : '';
-      const response = await fetch(
-        `${this.url}/rest/v1/recadinhos${filter}&order=criado_em.desc`,
-        { headers: this.getHeaders() }
-      );
-      if (!response.ok) throw new Error(`Erro ao buscar recadinhos: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error('Erro ao buscar recadinhos:', error);
-      return [];
+  try {
+    let url = `${this.url}/rest/v1/recadinhos`;
+
+    const params = new URLSearchParams();
+
+    if (aprovadosApenas) {
+      params.append('aprovado', 'eq.true');
     }
+
+    params.append('order', 'criado_em.desc');
+
+    url += `?${params.toString()}`;
+
+    const response = await fetch(url, {
+      headers: this.getHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ao buscar recadinhos: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao buscar recadinhos:', error);
+    return [];
   }
+}
 
   // Inserir recadinho
   async insertRecadinho(autor, mensagem) {

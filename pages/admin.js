@@ -236,9 +236,9 @@ async function loadPhotosSection() {
         showNotification('Foto enviada com sucesso!', 'success');
         fileInput.value = '';
         
-        // Atualizar última vez vistos
-        const today = DateUtils.toISODate(new Date());
-        await supabase.updateConfig({ ultima_vez_vistos: today });
+        // // Atualizar última vez vistos
+        // const today = DateUtils.toISODate(new Date());
+        // await supabase.updateConfig({ ultima_vez_vistos: today });
         
         // Recarregar lista de fotos
         await loadPhotosSection();
