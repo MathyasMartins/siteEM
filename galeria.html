@@ -1,32 +1,35 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Galeria de fotos do nosso amor">
   <meta name="theme-color" content="#e91e63">
-  
+
   <title>Galeria - Nosso Amor ❤️</title>
-  
+
   <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>❤️</text></svg>">
-  
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>❤️</text></svg>">
+
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
-  
+
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <!-- Header -->
   <header>
     <div class="container">
       <div class="header-content">
-        <a href="index.html" class="logo">💕 Nossas Fotos</a>
+        <a href="./index.html" class="logo">💕 Nossa História</a>
         <nav>
-          <a href="index.html">Início</a>
-          <a href="galeria.html" class="active">Galeria</a>
-          <a href="admin.html">Admin</a>
+          <a href="./index.html" class="active">Início</a>
+          <a href="./galeria.html">Galeria</a>
+          <a href="./admin.html">Admin</a>
           <button class="theme-toggle" id="themeToggle" title="Alternar tema">🌙</button>
         </nav>
       </div>
@@ -46,11 +49,11 @@
       <div class="gallery" id="galleryGrid">
         <!-- Fotos serão inseridas aqui via JavaScript -->
       </div>
-      
+
       <!-- Mensagem quando não há fotos -->
       <div id="noPhotosMessage" class="text-center hidden">
         <p style="font-size: var(--font-size-lg); color: var(--text-secondary);">
-          Ainda não há fotos na galeria. 
+          Ainda não há fotos na galeria.
           <a href="admin.html">Adicione fotos na administração!</a>
         </p>
       </div>
@@ -76,4 +79,5 @@
   <script src="script.js"></script>
   <script src="pages/galeria.js"></script>
 </body>
+
 </html>
