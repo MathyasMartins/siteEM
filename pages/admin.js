@@ -331,9 +331,7 @@ async function loadRecadinhosSection() {
     if (result) {
       showNotification('Recadinho adicionado com sucesso!', 'success');
       document.getElementById('myRecadinhoInput').value = '';
-
-      // ❌ REMOVIDO o loadRecadinhosSection()
-      // Aqui você deve chamar apenas a função que recarrega os recados
+      
       if (typeof carregarRecadinhos === "function") {
         await carregarRecadinhos();
       }
