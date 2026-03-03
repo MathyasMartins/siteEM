@@ -63,82 +63,65 @@ function updateCounters() {
   if (!window.config) return;
 
   const config = window.config;
+  // ================================
+  // Contador: Estamos juntos há (versão definitiva)
+  // ================================
 
- // ================================
-// Contador: Estamos juntos há (à prova de erro)
-// ================================
+  // Data atual zerada (evita bug de horário)
+  const agora = new Date();
+  agora.setHours(0, 0, 0, 0);
 
-const agora = new Date();
-agora.setHours(0, 0, 0, 0);
+  // Converte DD/MM/YYYY corretamente
+  const partes = config.inicio_relacionamento.split('/');
+  const inicio = new Date(partes[2], partes[1] - 1, partes[0]);
+  inicio.setHours(0, 0, 0, 0);
 
-let inicioRaw = config.inicio_relacionamento;
-let inicio;
+  // Total de dias juntos
+  const totalDias = Math.floor((agora - inicio) / (1000 * 60 * 60 * 24));
 
-// Detecta formato automaticamente
-if (typeof inicioRaw === "string") {
+  // Calcula meses completos
+  let meses =
+    (agora.getFullYear() - inicio.getFullYear()) * 12 +
+    (agora.getMonth() - inicio.getMonth());
 
-  if (inicioRaw.includes('/')) {
-    // Formato DD/MM/YYYY
-    const partes = inicioRaw.split('/');
-    inicio = new Date(partes[2], partes[1] - 1, partes[0]);
-  } else if (inicioRaw.includes('-')) {
-    // Formato YYYY-MM-DD
-    const partes = inicioRaw.split('-');
-    inicio = new Date(partes[0], partes[1] - 1, partes[2]);
-  }
-
-} else if (inicioRaw instanceof Date) {
-  inicio = new Date(inicioRaw);
-}
-
-if (!inicio || isNaN(inicio)) {
-  console.error("Data inválida:", inicioRaw);
-  return;
-}
-
-inicio.setHours(0, 0, 0, 0);
-
-// Total de dias juntos
-const totalDias = Math.floor((agora - inicio) / (1000 * 60 * 60 * 24));
-
-// Calcula meses completos
-let meses =
-  (agora.getFullYear() - inicio.getFullYear()) * 12 +
-  (agora.getMonth() - inicio.getMonth());
-
-let dataBase = new Date(inicio);
-dataBase.setMonth(inicio.getMonth() + meses);
-
-if (dataBase > agora) {
-  meses--;
-  dataBase = new Date(inicio);
+  // Cria data base adicionando os meses
+  let dataBase = new Date(inicio);
   dataBase.setMonth(inicio.getMonth() + meses);
-}
 
-let diasRestantes = Math.floor((agora - dataBase) / (1000 * 60 * 60 * 24));
-
-// ================================
-// EXIBIÇÃO
-// ================================
-
-if (meses <= 0) {
-
-  document.getElementById('togetherDays').textContent = totalDias;
-  document.getElementById('togetherText').textContent =
-    `${totalDias} ${totalDias === 1 ? 'dia' : 'dias'} juntos ❤️`;
-
-} else {
-
-  document.getElementById('togetherDays').textContent = meses;
-
-  if (diasRestantes === 0) {
-    document.getElementById('togetherText').textContent =
-      `Estamos há ${meses} ${meses === 1 ? 'mês' : 'meses'} juntos ❤️`;
-  } else {
-    document.getElementById('togetherText').textContent =
-      `${meses} ${meses === 1 ? 'mês' : 'meses'} e ${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'} juntos ❤️`;
+  // Se passou da data atual, volta 1 mês
+  if (dataBase > agora) {
+    meses--;
+    dataBase = new Date(inicio);
+    dataBase.setMonth(inicio.getMonth() + meses);
   }
-}
+
+  // Calcula dias restantes após meses completos
+  let diasRestantes = Math.floor((agora - dataBase) / (1000 * 60 * 60 * 24));
+
+
+  // ================================
+  // EXIBIÇÃO
+  // ================================
+
+  if (meses <= 0) {
+
+    // Ainda não completou 1 mês
+    document.getElementById('togetherDays').textContent = totalDias;
+    document.getElementById('togetherText').textContent =
+      `${totalDias} ${totalDias === 1 ? 'dia' : 'dias'} juntos ❤️`;
+
+  } else {
+
+    document.getElementById('togetherDays').textContent = meses;
+
+    if (diasRestantes === 0) {
+      document.getElementById('togetherText').textContent =
+        `Estamos há ${meses} ${meses === 1 ? 'mês' : 'meses'} juntos ❤️`;
+    } else {
+      document.getElementById('togetherText').textContent =
+        `${meses} ${meses === 1 ? 'mês' : 'meses'} e ${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'} juntos ❤️`;
+    }
+  }
   // ================================
   // Contador: Sem nos ver há
   // ================================
