@@ -12,122 +12,31 @@
 document.addEventListener('DOMContentLoaded', async () => {
   // Aplicar tema
   updateThemeToggle();
-  
+
   // Verificar autenticação
   checkAuthentication();
-  
+
   // Configurar theme toggle
   document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 });
 
-// ============================================================================
-// AUTENTICAÇÃO
-// ============================================================================
-
-function checkAuthentication() {
+async function checkAuthentication() {
   const loginSection = document.getElementById('loginSection');
   const adminDashboard = document.getElementById('adminDashboard');
-  
+
   if (!loginSection || !adminDashboard) return;
-  
-  if (adminAuth.isPasswordSet() && adminAuth.isLoggedIn()) {
-    // Usuário logado
-    loginSection.style.display = 'none';
-    adminDashboard.style.display = 'block';
-    setupAdminDashboard();
-  } else if (adminAuth.isPasswordSet()) {
-    // Senha já foi definida, mostrar login
-    loginSection.style.display = 'block';
-    adminDashboard.style.display = 'none';
-    setupLoginForm();
-  } else {
-    // Primeira vez, definir senha
-    loginSection.style.display = 'block';
-    adminDashboard.style.display = 'none';
-    setupFirstTimePassword();
-  }
-}
 
-function setupLoginForm() {
-  const form = document.getElementById('loginForm');
-  if (!form) return;
-  
-  form.innerHTML = `
-    <div class="form-group">
-      <label for="adminPassword">Senha de Administrador</label>
-      <input 
-        type="password" 
-        id="adminPassword" 
-        placeholder="Digite sua senha"
-        required>
-    </div>
-    <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">Entrar</button>
-  `;
-  
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const password = document.getElementById('adminPassword').value;
-    
-    if (adminAuth.login(password)) {
-      showNotification('Login realizado com sucesso!', 'success');
-      setTimeout(() => checkAuthentication(), 500);
-    } else {
-      showNotification('Senha incorreta', 'error');
-      document.getElementById('adminPassword').value = '';
-    }
-  });
-}
+  const { data: { session } } = await supabase.auth.getSession();
 
-function setupFirstTimePassword() {
-  const form = document.getElementById('loginForm');
-  if (!form) return;
-  
-  const loginSection = document.getElementById('loginSection');
-  if (loginSection) {
-    loginSection.querySelector('h1').textContent = 'Primeira Vez? 🔐';
-    loginSection.querySelector('p').textContent = 'Defina uma senha para proteger a administração';
+  if (!session) {
+    showLoginForm();
+    return;
   }
-  
-  form.innerHTML = `
-    <div class="form-group">
-      <label for="adminPassword">Defina uma Senha</label>
-      <input 
-        type="password" 
-        id="adminPassword" 
-        placeholder="Digite uma senha forte"
-        required>
-    </div>
-    <div class="form-group">
-      <label for="adminPasswordConfirm">Confirme a Senha</label>
-      <input 
-        type="password" 
-        id="adminPasswordConfirm" 
-        placeholder="Confirme a senha"
-        required>
-    </div>
-    <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">Definir Senha</button>
-  `;
-  
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const password = document.getElementById('adminPassword').value;
-    const passwordConfirm = document.getElementById('adminPasswordConfirm').value;
-    
-    if (password.length < 4) {
-      showNotification('A senha deve ter pelo menos 4 caracteres', 'warning');
-      return;
-    }
-    
-    if (password !== passwordConfirm) {
-      showNotification('As senhas não correspondem', 'error');
-      return;
-    }
-    
-    adminAuth.setPassword(password);
-    adminAuth.login(password);
-    showNotification('Senha definida com sucesso!', 'success');
-    setTimeout(() => checkAuthentication(), 500);
-  });
+
+  // Usuário autenticado
+  loginSection.style.display = 'none';
+  adminDashboard.style.display = 'block';
+  setupAdminDashboard();
 }
 
 // ============================================================================
@@ -144,7 +53,7 @@ async function setupAdminDashboard() {
       setTimeout(() => checkAuthentication(), 500);
     });
   }
-  
+
   // Carregar dados
   await loadConfigForm();
   await loadPhotosSection();
@@ -160,35 +69,35 @@ async function setupAdminDashboard() {
 async function loadConfigForm() {
   const form = document.getElementById('configForm');
   if (!form) return;
-  
+
   const config = await supabase.getConfig();
-  
+
   if (config) {
     document.getElementById('coupleNameInput').value = config.nome_casal;
     document.getElementById('startDateInput').value = DateUtils.toISODate(config.inicio_relacionamento);
     document.getElementById('lastMeetInput').value = DateUtils.toISODate(config.ultima_vez_vistos);
     document.getElementById('nextMeetInput').value = DateUtils.toISODate(config.proximo_encontro);
   }
-  
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const updates = {
       nome_casal: document.getElementById('coupleNameInput').value,
       inicio_relacionamento: document.getElementById('startDateInput').value,
       ultima_vez_vistos: document.getElementById('lastMeetInput').value,
       proximo_encontro: document.getElementById('nextMeetInput').value
     };
-    
+
     const submitBtn = form.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Salvando...';
-    
+
     const result = await supabase.updateConfig(updates);
-    
+
     submitBtn.disabled = false;
     submitBtn.textContent = 'Salvar Configurações';
-    
+
     if (result) {
       showNotification('Configurações salvas com sucesso!', 'success');
       window.config = updates;
@@ -205,41 +114,41 @@ async function loadConfigForm() {
 async function loadPhotosSection() {
   const uploadForm = document.getElementById('uploadForm');
   if (!uploadForm) return;
-  
+
   uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const fileInput = document.getElementById('photoInput');
     const file = fileInput.files[0];
-    
+
     if (!file) {
       showNotification('Por favor, selecione uma foto', 'warning');
       return;
     }
-    
+
     const submitBtn = uploadForm.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Enviando...';
-    
+
     try {
       // Upload para Cloudinary
       const imageUrl = await cloudinary.uploadImage(file);
-      
+
       if (!imageUrl) {
         throw new Error('Erro ao fazer upload');
       }
-      
+
       // Salvar URL no Supabase
       const result = await supabase.insertFoto(imageUrl);
-      
+
       if (result) {
         showNotification('Foto enviada com sucesso!', 'success');
         fileInput.value = '';
-        
+
         // // Atualizar última vez vistos
         // const today = DateUtils.toISODate(new Date());
         // await supabase.updateConfig({ ultima_vez_vistos: today });
-        
+
         // Recarregar lista de fotos
         await loadPhotosSection();
       } else {
@@ -253,19 +162,19 @@ async function loadPhotosSection() {
       submitBtn.textContent = 'Enviar Foto';
     }
   });
-  
+
   // Carregar lista de fotos
   const fotos = await supabase.getFotos();
   const photosList = document.getElementById('photosList');
-  
+
   if (photosList) {
     photosList.innerHTML = '';
-    
+
     if (fotos.length === 0) {
       photosList.innerHTML = '<p style="color: var(--text-secondary);">Nenhuma foto adicionada ainda.</p>';
       return;
     }
-    
+
     fotos.forEach(foto => {
       const item = document.createElement('div');
       item.className = 'admin-item';
@@ -287,7 +196,7 @@ async function loadPhotosSection() {
 
 async function deleteFoto(id) {
   if (!confirm('Tem certeza que deseja deletar esta foto?')) return;
-  
+
   const result = await supabase.deleteFoto(id);
   if (result) {
     showNotification('Foto deletada com sucesso!', 'success');
@@ -331,7 +240,7 @@ async function loadRecadinhosSection() {
     if (result) {
       showNotification('Recadinho adicionado com sucesso!', 'success');
       document.getElementById('myRecadinhoInput').value = '';
-      
+
       if (typeof carregarRecadinhos === "function") {
         await carregarRecadinhos();
       }
@@ -340,15 +249,15 @@ async function loadRecadinhosSection() {
       showNotification('Erro ao adicionar recadinho', 'error');
     }
   });
-  
+
   // Carregar recadinhos pendentes
   const pendingRecadinhos = await supabase.getRecadinhos(false);
   const pendingList = document.getElementById('pendingRecadinhosList');
-  
+
   if (pendingList) {
     pendingList.innerHTML = '';
     const pending = pendingRecadinhos.filter(r => !r.aprovado);
-    
+
     if (pending.length === 0) {
       pendingList.innerHTML = '<p style="color: var(--text-secondary);">Nenhum recadinho pendente.</p>';
     } else {
@@ -371,12 +280,12 @@ async function loadRecadinhosSection() {
       });
     }
   }
-  
+
   // Carregar todos os recadinhos
   const allList = document.getElementById('allRecadinhosList');
   if (allList) {
     allList.innerHTML = '';
-    
+
     if (pendingRecadinhos.length === 0) {
       allList.innerHTML = '<p style="color: var(--text-secondary);">Nenhum recadinho.</p>';
     } else {
@@ -414,7 +323,7 @@ async function approveRecadinho(id) {
 
 async function deleteRecadinho(id) {
   if (!confirm('Tem certeza que deseja deletar este recadinho?')) return;
-  
+
   const result = await supabase.deleteRecadinho(id);
   if (result) {
     showNotification('Recadinho deletado com sucesso!', 'success');
@@ -440,32 +349,32 @@ async function loadAgendaSection() {
   // 🚀 evita múltiplos listeners
   if (form.dataset.listenerAdded === "true") return;
   form.dataset.listenerAdded = "true";
-  
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const titulo = document.getElementById('agendaTitleInput').value.trim();
     const data = document.getElementById('agendaDateInput').value;
     const mensagem = document.getElementById('agendaMessageInput').value.trim();
-    
+
     if (!titulo || !data) {
       showNotification('Por favor, preencha título e data', 'warning');
       return;
     }
-    
+
     const submitBtn = form.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Adicionando...';
-    
+
     const result = await supabase.insertAgenda(titulo, data, mensagem || null);
-    
+
     submitBtn.disabled = false;
     submitBtn.textContent = 'Adicionar à Agenda';
-    
+
     if (result) {
       showNotification('Data adicionada à agenda!', 'success');
       form.reset();
-      
+
       if (typeof carregarAgenda === "function") {
         await carregarAgenda();
       }
@@ -474,14 +383,14 @@ async function loadAgendaSection() {
       showNotification('Erro ao adicionar à agenda', 'error');
     }
   });
-  
+
   // Carregar agenda
   const agenda = await supabase.getAgenda();
   const agendaList = document.getElementById('agendaList');
-  
+
   if (agendaList) {
     agendaList.innerHTML = '';
-    
+
     if (!agenda || agenda.length === 0) {
       agendaList.innerHTML = '<p style="color: var(--text-secondary);">Nenhuma data especial adicionada.</p>';
     } else {
@@ -520,7 +429,7 @@ async function loadAgendaSection() {
 
 async function deleteAgenda(id) {
   if (!confirm('Tem certeza que deseja deletar este evento?')) return;
-  
+
   const result = await supabase.deleteAgenda(id);
   if (result) {
     showNotification('Evento deletado com sucesso!', 'success');
@@ -538,14 +447,14 @@ async function setupBackupRestore() {
   const exportBtn = document.getElementById('exportBtn');
   const importBtn = document.getElementById('importBtn');
   const importFile = document.getElementById('importFile');
-  
+
   if (exportBtn) {
     exportBtn.addEventListener('click', async () => {
       exportBtn.disabled = true;
       exportBtn.textContent = 'Exportando...';
-      
+
       const dados = await supabase.exportarDados();
-      
+
       if (dados) {
         const json = JSON.stringify(dados, null, 2);
         const filename = `site-romantico-backup-${new Date().toISOString().split('T')[0]}.json`;
@@ -554,34 +463,34 @@ async function setupBackupRestore() {
       } else {
         showNotification('Erro ao exportar backup', 'error');
       }
-      
+
       exportBtn.disabled = false;
       exportBtn.textContent = 'Exportar JSON 📥';
     });
   }
-  
+
   if (importBtn) {
     importBtn.addEventListener('click', () => {
       importFile.click();
     });
   }
-  
+
   if (importFile) {
     importFile.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      
+
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
           const dados = JSON.parse(event.target.result);
-          
+
           if (!confirm('Tem certeza que deseja importar estes dados? Isso pode sobrescrever dados existentes.')) {
             return;
           }
-          
+
           const result = await supabase.importarDados(dados);
-          
+
           if (result) {
             showNotification('Dados importados com sucesso!', 'success');
             setTimeout(() => location.reload(), 1000);
