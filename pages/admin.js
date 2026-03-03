@@ -38,7 +38,57 @@ async function checkAuthentication() {
   adminDashboard.style.display = 'block';
   setupAdminDashboard();
 }
+function showLoginForm() {
+  const form = document.getElementById('loginForm');
+  const loginSection = document.getElementById('loginSection');
+  const adminDashboard = document.getElementById('adminDashboard');
 
+  loginSection.style.display = 'block';
+  adminDashboard.style.display = 'none';
+
+  form.innerHTML = `
+    <div class="form-group">
+      <label for="adminEmail">Email</label>
+      <input 
+        type="email" 
+        id="adminEmail" 
+        placeholder="Digite seu email"
+        required>
+    </div>
+
+    <div class="form-group">
+      <label for="adminPassword">Senha</label>
+      <input 
+        type="password" 
+        id="adminPassword" 
+        placeholder="Digite sua senha"
+        required>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">
+      Entrar
+    </button>
+  `;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById('adminEmail').value;
+    const password = document.getElementById('adminPassword').value;
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      showNotification('Email ou senha inválidos', 'error');
+      return;
+    }
+
+    checkAuthentication();
+  });
+}
 // ============================================================================
 // DASHBOARD DE ADMINISTRAÇÃO
 // ============================================================================
@@ -47,10 +97,10 @@ async function setupAdminDashboard() {
   // Logout
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      adminAuth.logout();
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut();
       showNotification('Desconectado com sucesso', 'info');
-      setTimeout(() => checkAuthentication(), 500);
+      setTimeout(() => checkAuthentication(), 300);
     });
   }
 
