@@ -1,24 +1,28 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Site romântico para celebrar nosso amor ❤️">
   <meta name="theme-color" content="#e91e63">
-  
+
   <title>Nossa História ❤️</title>
-  
+
   <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>❤️</text></svg>">
-  
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>❤️</text></svg>">
+
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><text y='150' font-size='150'>❤️</text></svg>">
-  
+  <link rel="apple-touch-icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><text y='150' font-size='150'>❤️</text></svg>">
+
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+
+<body style="display:none;">
   <!-- Header -->
   <header>
     <div class="container">
@@ -80,18 +84,14 @@
     <!-- Recadinhos -->
     <section>
       <h2 class="text-center">Recadinhos do Coração 💌</h2>
-      
+
       <!-- Formulário para enviar recadinho -->
       <div class="recadinho-form">
         <h3>Deixe um Recadinho</h3>
         <form id="recadinhoForm">
           <div class="form-group">
             <label for="recadinhoMessage">Sua Mensagem (máx. 200 caracteres)</label>
-            <textarea 
-              id="recadinhoMessage" 
-              placeholder="Escreva algo especial..."
-              maxlength="200"
-              required></textarea>
+            <textarea id="recadinhoMessage" placeholder="Escreva algo especial..." maxlength="200" required></textarea>
             <small id="charCount" style="color: var(--text-secondary);">0/200</small>
           </div>
           <button type="submit" class="btn btn-primary btn-large">Enviar Recadinho ❤️</button>
@@ -117,4 +117,5 @@
   <script src="script.js"></script>
   <script src="pages/index.js"></script>
 </body>
+
 </html>
