@@ -11,7 +11,32 @@ let recadinhos = [];
 // ============================================================================
 // INICIALIZAÇÃO
 // ============================================================================
+// ============================================================================
+// GERENCIADOR DE TEMA
+// ============================================================================
 
+const themeManager = {
+  toggle() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', isDark ? 'true' : 'false');
+  },
+
+  isDarkMode() {
+    return document.body.classList.contains('dark-mode');
+  },
+
+  init() {
+    const saved = localStorage.getItem('darkMode');
+    if (saved === 'true') {
+      document.body.classList.add('dark-mode');
+    }
+  }
+};
+
+// Inicializa tema ao carregar
+document.addEventListener('DOMContentLoaded', () => {
+  themeManager.init();
+});
 document.addEventListener('DOMContentLoaded', async () => {
   // Aplicar tema
   updateThemeToggle();
@@ -64,81 +89,81 @@ function updateCounters() {
 
   const config = window.config;
 
- // ================================
-// Contador: Estamos juntos há (à prova de erro)
-// ================================
+  // ================================
+  // Contador: Estamos juntos há (à prova de erro)
+  // ================================
 
-const agora = new Date();
-agora.setHours(0, 0, 0, 0);
+  const agora = new Date();
+  agora.setHours(0, 0, 0, 0);
 
-let inicioRaw = config.inicio_relacionamento;
-let inicio;
+  let inicioRaw = config.inicio_relacionamento;
+  let inicio;
 
-// Detecta formato automaticamente
-if (typeof inicioRaw === "string") {
+  // Detecta formato automaticamente
+  if (typeof inicioRaw === "string") {
 
-  if (inicioRaw.includes('/')) {
-    // Formato DD/MM/YYYY
-    const partes = inicioRaw.split('/');
-    inicio = new Date(partes[2], partes[1] - 1, partes[0]);
-  } else if (inicioRaw.includes('-')) {
-    // Formato YYYY-MM-DD
-    const partes = inicioRaw.split('-');
-    inicio = new Date(partes[0], partes[1] - 1, partes[2]);
+    if (inicioRaw.includes('/')) {
+      // Formato DD/MM/YYYY
+      const partes = inicioRaw.split('/');
+      inicio = new Date(partes[2], partes[1] - 1, partes[0]);
+    } else if (inicioRaw.includes('-')) {
+      // Formato YYYY-MM-DD
+      const partes = inicioRaw.split('-');
+      inicio = new Date(partes[0], partes[1] - 1, partes[2]);
+    }
+
+  } else if (inicioRaw instanceof Date) {
+    inicio = new Date(inicioRaw);
   }
 
-} else if (inicioRaw instanceof Date) {
-  inicio = new Date(inicioRaw);
-}
+  if (!inicio || isNaN(inicio)) {
+    console.error("Data inválida:", inicioRaw);
+    return;
+  }
 
-if (!inicio || isNaN(inicio)) {
-  console.error("Data inválida:", inicioRaw);
-  return;
-}
+  inicio.setHours(0, 0, 0, 0);
 
-inicio.setHours(0, 0, 0, 0);
+  // Total de dias juntos
+  const totalDias = Math.floor((agora - inicio) / (1000 * 60 * 60 * 24));
 
-// Total de dias juntos
-const totalDias = Math.floor((agora - inicio) / (1000 * 60 * 60 * 24));
+  // Calcula meses completos
+  let meses =
+    (agora.getFullYear() - inicio.getFullYear()) * 12 +
+    (agora.getMonth() - inicio.getMonth());
 
-// Calcula meses completos
-let meses =
-  (agora.getFullYear() - inicio.getFullYear()) * 12 +
-  (agora.getMonth() - inicio.getMonth());
-
-let dataBase = new Date(inicio);
-dataBase.setMonth(inicio.getMonth() + meses);
-
-if (dataBase > agora) {
-  meses--;
-  dataBase = new Date(inicio);
+  let dataBase = new Date(inicio);
   dataBase.setMonth(inicio.getMonth() + meses);
-}
 
-let diasRestantes = Math.floor((agora - dataBase) / (1000 * 60 * 60 * 24));
-
-// ================================
-// EXIBIÇÃO
-// ================================
-
-if (meses <= 0) {
-
-  document.getElementById('togetherDays').textContent = totalDias;
-  document.getElementById('togetherText').textContent =
-    `${totalDias} ${totalDias === 1 ? 'dia' : 'dias'} juntos ❤️`;
-
-} else {
-
-  document.getElementById('togetherDays').textContent = meses;
-
-  if (diasRestantes === 0) {
-    document.getElementById('togetherText').textContent =
-      `Estamos há ${meses} ${meses === 1 ? 'mês' : 'meses'} juntos ❤️`;
-  } else {
-    document.getElementById('togetherText').textContent =
-      `${meses} ${meses === 1 ? 'mês' : 'meses'} e ${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'} juntos ❤️`;
+  if (dataBase > agora) {
+    meses--;
+    dataBase = new Date(inicio);
+    dataBase.setMonth(inicio.getMonth() + meses);
   }
-}
+
+  let diasRestantes = Math.floor((agora - dataBase) / (1000 * 60 * 60 * 24));
+
+  // ================================
+  // EXIBIÇÃO
+  // ================================
+
+  if (meses <= 0) {
+
+    document.getElementById('togetherDays').textContent = totalDias;
+    document.getElementById('togetherText').textContent =
+      `${totalDias} ${totalDias === 1 ? 'dia' : 'dias'} juntos ❤️`;
+
+  } else {
+
+    document.getElementById('togetherDays').textContent = meses;
+
+    if (diasRestantes === 0) {
+      document.getElementById('togetherText').textContent =
+        `Estamos há ${meses} ${meses === 1 ? 'mês' : 'meses'} juntos ❤️`;
+    } else {
+      document.getElementById('togetherText').textContent =
+        `${meses} ${meses === 1 ? 'mês' : 'meses'} e ${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'} juntos ❤️`;
+    }
+  }
   // ================================
   // Contador: Sem nos ver há
   // ================================

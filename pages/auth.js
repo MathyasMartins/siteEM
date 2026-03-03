@@ -1,10 +1,10 @@
 const SUPABASE_URL = 'https://rnwbazmklptnvjknlwsu.supabase.co';
 const SUPABASE_ANON_KEY = 'SUA_ANON_KEY_AQUI';
 
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
+// const supabase = window.supabase.createClient(
+//   SUPABASE_URL,
+//   SUPABASE_ANON_KEY
+// );
 
 async function requireAuth() {
   const { data: { session } } = await supabase.auth.getSession();
