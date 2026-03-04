@@ -30,7 +30,7 @@ async function checkAuth() {
   const loading = document.getElementById('authLoading');
 
   if (!data.session) {
-    window.location.href = 'login.html';
+    window.location.href = './login.html';
   } else {
     if (loading) loading.style.display = 'none';
   }
@@ -43,14 +43,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       await supabaseClient.auth.signOut();
-      window.location.href = 'login.html';
+      window.location.href = './login.html';
     });
   }
 });
 
 supabaseClient.auth.onAuthStateChange((_event, session) => {
   if (!session) {
-    window.location.href = 'login.html';
+    window.location.href = './login.html';
   }
 });
 
@@ -380,7 +380,7 @@ async function checkAuth() {
 document.addEventListener('DOMContentLoaded', async () => {
 
   const BASE_PATH = '/siteEM';
-  const isLoginPage = window.location.pathname.includes('login.html');
+  const isLoginPage = window.location.pathname.includes('./login.html');
 
   try {
 
@@ -388,19 +388,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (error) {
       console.error(error);
-      window.location.replace(`${BASE_PATH}/login.html`);
+      window.location.replace(`${BASE_PATH}./login.html`);
       return;
     }
 
     const session = data.session;
 
     if (!session && !isLoginPage) {
-      window.location.replace(`${BASE_PATH}/login.html`);
+      window.location.replace(`${BASE_PATH}./login.html`);
       return;
     }
 
     if (session && isLoginPage) {
-      window.location.replace(`${BASE_PATH}/index.html`);
+      window.location.replace(`${BASE_PATH}./index.html`);
       return;
     }
 
@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   } catch (err) {
     console.error(err);
-    window.location.replace(`${BASE_PATH}/login.html`);
+    window.location.replace(`${BASE_PATH}./login.html`);
   }
 
 });
