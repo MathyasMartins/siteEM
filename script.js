@@ -11,7 +11,7 @@
 
 const supabase = new SupabaseAPI(SUPABASE_URL, SUPABASE_ANON_KEY);
 const cloudinary = new CloudinaryAPI(CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET);
-const themeManager = new ThemeManager();
+window.themeManager = new ThemeManager();
 // ============================================================================
 // CONFIGURAÇÃO - EDITE AQUI COM SEUS VALORES
 // ============================================================================
