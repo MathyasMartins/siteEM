@@ -248,6 +248,7 @@ window.supabaseClient = window.supabase.createClient(
   SUPABASE_ANON_KEY
 );
 
+const supabaseClient = window.supabaseClient;
 
 // ============================================================================
 // PROTEÇÃO GLOBAL
