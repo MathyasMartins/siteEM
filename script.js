@@ -377,19 +377,29 @@ async function checkAuth() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const isLoginPage = window.location.pathname.includes('./login.html');
+document.addEventListener('DOMContentLoaded', async () => {
 
-  if (!isLoginPage) {
-    checkAuth();
+  const isLoginPage = window.location.pathname.includes('login.html');
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
+  if (!session && !isLoginPage) {
+    window.location.replace('./login.html');
+    return;
   }
+
+  if (session && isLoginPage) {
+    window.location.replace('./index.html');
+    return;
+  }
+
 });
 
 supabaseClient.auth.onAuthStateChange((_event, session) => {
-  const isLoginPage = window.location.pathname.includes('./login.html');
+  const isLoginPage = window.location.pathname.includes('login.html');
 
   if (!session && !isLoginPage) {
-    window.location.href = './login.html';
+    window.location.replace('./login.html');
   }
 });
 // ============================================================================
