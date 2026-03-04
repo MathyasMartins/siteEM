@@ -380,32 +380,38 @@ async function checkAuth() {
 document.addEventListener('DOMContentLoaded', async () => {
 
   const BASE_PATH = '/siteEM';
-
   const isLoginPage = window.location.pathname.includes('login.html');
 
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  try {
 
-  // 🔒 Se NÃO estiver logado e NÃO for a página de login → manda para login
-  if (!session && !isLoginPage) {
-    window.location.replace(`${BASE_PATH}/login.html`);
-    return;
-  }
+    const { data, error } = await supabaseClient.auth.getSession();
 
-  // 🔁 Se estiver logado e tentar acessar login → manda para index
-  if (session && isLoginPage) {
-    window.location.replace(`${BASE_PATH}/index.html`);
-    return;
-  }
+    if (error) {
+      console.error(error);
+      window.location.replace(`${BASE_PATH}/login.html`);
+      return;
+    }
 
-});
+    const session = data.session;
 
-// 🔄 Se deslogar em qualquer momento → volta para login
-supabaseClient.auth.onAuthStateChange((_event, session) => {
+    if (!session && !isLoginPage) {
+      window.location.replace(`${BASE_PATH}/login.html`);
+      return;
+    }
 
-  const BASE_PATH = '/siteEM';
-  const isLoginPage = window.location.pathname.includes('login.html');
+    if (session && isLoginPage) {
+      window.location.replace(`${BASE_PATH}/index.html`);
+      return;
+    }
 
-  if (!session && !isLoginPage) {
+    // 🔓 REMOVE O BLOQUEIO VISUAL
+    const authLoading = document.getElementById('authLoading');
+    if (authLoading) {
+      authLoading.remove();
+    }
+
+  } catch (err) {
+    console.error(err);
     window.location.replace(`${BASE_PATH}/login.html`);
   }
 
