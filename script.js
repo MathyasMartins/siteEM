@@ -16,7 +16,7 @@ const CLOUDINARY_UPLOAD_PRESET = 'site-romantico-unsigned';
 
 // <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-const supabaseClient = supabase.createClient(
+const supabaseClient = supabaseApi.createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY
 );
@@ -332,7 +332,7 @@ class CloudinaryAPI {
 // INSTÂNCIAS GLOBAIS
 // ============================================================================
 
-const supabase = new SupabaseAPI(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseApi = new SupabaseAPI(SUPABASE_URL, SUPABASE_ANON_KEY);
 const cloudinary = new CloudinaryAPI(CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET);
 
 // ============================================================================
