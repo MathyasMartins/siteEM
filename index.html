@@ -15,10 +15,19 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><text y='150' font-size='150'>❤️</text></svg>">
   
-  <!-- Stylesheet -->
+  <!-- Styles -->
   <link rel="stylesheet" href="style.css">
+
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+  <!-- BLOQUEIO VISUAL (removido pelo script.js após autenticação) -->
+  <div id="authLoading" style="position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;z-index:9999;">
+    <h2>Verificando acesso...</h2>
+  </div>
+
   <!-- Header -->
   <header>
     <div class="container">
@@ -29,6 +38,7 @@
           <a href="./galeria.html">Galeria</a>
           <a href="./admin.html">Admin</a>
           <button class="theme-toggle" id="themeToggle" title="Alternar tema">🌙</button>
+          <button class="btn btn-small btn-outline" id="logoutBtn">Logout</button>
         </nav>
       </div>
     </div>
@@ -36,6 +46,7 @@
 
   <!-- Main Content -->
   <main class="container">
+
     <!-- Hero Section -->
     <section class="hero">
       <h1 id="coupleNameHero">Carregando...</h1>
@@ -65,12 +76,8 @@
     <section>
       <h2 class="text-center">Nossos Momentos 📷</h2>
       <div class="slideshow">
-        <div class="slideshow-container" id="slideshowContainer">
-          <!-- Imagens serão inseridas aqui via JavaScript -->
-        </div>
-        <div class="slideshow-nav" id="slideshowNav">
-          <!-- Dots serão inseridos aqui via JavaScript -->
-        </div>
+        <div class="slideshow-container" id="slideshowContainer"></div>
+        <div class="slideshow-nav" id="slideshowNav"></div>
       </div>
       <div class="text-center mt-lg mb-lg">
         <a href="galeria.html" class="btn btn-primary">Ver Galeria Completa 🖼️</a>
@@ -81,7 +88,6 @@
     <section>
       <h2 class="text-center">Recadinhos do Coração 💌</h2>
       
-      <!-- Formulário para enviar recadinho -->
       <div class="recadinho-form">
         <h3>Deixe um Recadinho</h3>
         <form id="recadinhoForm">
@@ -94,14 +100,13 @@
               required></textarea>
             <small id="charCount" style="color: var(--text-secondary);">0/200</small>
           </div>
-          <button type="submit" class="btn btn-primary btn-large">Enviar Recadinho ❤️</button>
+          <button type="submit" class="btn btn-primary btn-large">
+            Enviar Recadinho ❤️
+          </button>
         </form>
       </div>
 
-      <!-- Mural de Recadinhos -->
-      <div class="recadinhos-container" id="recadinhosContainer">
-        <!-- Recadinhos serão inseridos aqui via JavaScript -->
-      </div>
+      <div class="recadinhos-container" id="recadinhosContainer"></div>
     </section>
   </main>
 
@@ -116,5 +121,6 @@
   <!-- Scripts -->
   <script src="script.js"></script>
   <script src="pages/index.js"></script>
+
 </body>
 </html>
