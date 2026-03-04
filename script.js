@@ -4,6 +4,10 @@
 // Este arquivo contém toda a lógica central, integração com Supabase e
 // Cloudinary, e utilitários compartilhados por todas as páginas.
 // ============================================================================
+const SUPABASE_URL = 'https://rnwbazmklptnvjknlwsu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJud2Jhem1rbHB0bnZqa25sd3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzNTk2MzIsImV4cCI6MjA4MzkzNTYzMn0.I6KFmWtLmLkYvVqbaQt6BFSnx0BQt92Asjm_A5LGScI';
+const CLOUDINARY_CLOUD_NAME = 'ddbtzkw3a';
+const CLOUDINARY_UPLOAD_PRESET = 'site-romantico-unsigned';
 // ============================================================================
 // CLASSE: SupabaseAPI (REST)
 // ============================================================================
