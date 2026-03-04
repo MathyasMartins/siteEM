@@ -4,63 +4,6 @@
 // Este arquivo contém toda a lógica central, integração com Supabase e
 // Cloudinary, e utilitários compartilhados por todas as páginas.
 // ============================================================================
-
-// ============================================================================
-// INSTÂNCIAS GLOBAIS
-// ============================================================================
-
-const supabaseApi = new SupabaseAPI(SUPABASE_URL, SUPABASE_ANON_KEY);
-const cloudinary = new CloudinaryAPI(CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET);
-window.themeManager = new ThemeManager();
-// ============================================================================
-// CONFIGURAÇÃO - EDITE AQUI COM SEUS VALORES
-// ============================================================================
-
-const SUPABASE_URL = 'https://rnwbazmklptnvjknlwsu.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJud2Jhem1rbHB0bnZqa25sd3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzNTk2MzIsImV4cCI6MjA4MzkzNTYzMn0.I6KFmWtLmLkYvVqbaQt6BFSnx0BQt92Asjm_A5LGScI';
-const CLOUDINARY_CLOUD_NAME = 'ddbtzkw3a';
-const CLOUDINARY_UPLOAD_PRESET = 'site-romantico-unsigned';
-
-// <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-const supabaseClient = supabaseApi.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
-
-// ============================================================================
-// PROTEÇÃO GLOBAL DO SITE
-// ============================================================================
-
-async function checkAuth() {
-  const { data } = await supabaseClient.auth.getSession();
-  const loading = document.getElementById('authLoading');
-
-  if (!data.session) {
-    window.location.href = './login.html';
-  } else {
-    if (loading) loading.style.display = 'none';
-  }
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  await checkAuth();
-
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await supabaseClient.auth.signOut();
-      window.location.href = './login.html';
-    });
-  }
-});
-
-supabaseClient.auth.onAuthStateChange((_event, session) => {
-  if (!session) {
-    window.location.href = './login.html';
-  }
-});
-
 // ============================================================================
 // CLASSE: SupabaseAPI (REST)
 // ============================================================================
@@ -73,8 +16,8 @@ class SupabaseAPI {
 
   getHeaders() {
     return {
-      'apikey': this.key,
-      'Authorization': `Bearer ${this.key}`,
+      apikey: this.key,
+      Authorization: `Bearer ${this.key}`,
       'Content-Type': 'application/json'
     };
   }
@@ -88,220 +31,155 @@ class SupabaseAPI {
       if (!response.ok) throw new Error();
       const data = await response.json();
       return data[0] || null;
-    } catch (error) {
-      console.error(error);
+    } catch {
       return null;
     }
   }
 
   async updateConfig(updates) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/config?id=eq.1`,
-        {
-          method: 'PATCH',
-          headers: this.getHeaders(),
-          body: JSON.stringify(updates)
-        }
-      );
-      return response.ok;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
+    const response = await fetch(
+      `${this.url}/rest/v1/config?id=eq.1`,
+      {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify(updates)
+      }
+    );
+    return response.ok;
   }
 
   async getRecadinhos(aprovadosApenas = true) {
-    try {
-      let url = `${this.url}/rest/v1/recadinhos`;
-      const params = new URLSearchParams();
+    let url = `${this.url}/rest/v1/recadinhos`;
+    const params = new URLSearchParams();
 
-      if (aprovadosApenas) {
-        params.append('aprovado', 'eq.true');
-      }
-
-      params.append('order', 'criado_em.desc');
-      url += `?${params.toString()}`;
-
-      const response = await fetch(url, {
-        headers: this.getHeaders()
-      });
-
-      if (!response.ok) throw new Error();
-      return await response.json();
-
-    } catch (error) {
-      console.error(error);
-      return [];
+    if (aprovadosApenas) {
+      params.append('aprovado', 'eq.true');
     }
+
+    params.append('order', 'criado_em.desc');
+    url += `?${params.toString()}`;
+
+    const response = await fetch(url, {
+      headers: this.getHeaders()
+    });
+
+    if (!response.ok) return [];
+    return await response.json();
   }
 
   async insertRecadinho(autor, mensagem) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/recadinhos`,
-        {
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify({
-            autor,
-            mensagem,
-            aprovado: false
-          })
-        }
-      );
+    const response = await fetch(
+      `${this.url}/rest/v1/recadinhos`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          autor,
+          mensagem,
+          aprovado: false
+        })
+      }
+    );
 
-      return response.ok;
-
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
+    return response.ok;
   }
 
   async updateRecadinho(id, updates) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/recadinhos?id=eq.${id}`,
-        {
-          method: 'PATCH',
-          headers: this.getHeaders(),
-          body: JSON.stringify(updates)
-        }
-      );
+    const response = await fetch(
+      `${this.url}/rest/v1/recadinhos?id=eq.${id}`,
+      {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify(updates)
+      }
+    );
 
-      return response.ok;
-
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
+    return response.ok;
   }
 
   async deleteRecadinho(id) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/recadinhos?id=eq.${id}`,
-        {
-          method: 'DELETE',
-          headers: this.getHeaders()
-        }
-      );
+    const response = await fetch(
+      `${this.url}/rest/v1/recadinhos?id=eq.${id}`,
+      {
+        method: 'DELETE',
+        headers: this.getHeaders()
+      }
+    );
 
-      return response.ok;
-
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
+    return response.ok;
   }
 
   async getFotos() {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/fotos?order=criado_em.desc`,
-        { headers: this.getHeaders() }
-      );
+    const response = await fetch(
+      `${this.url}/rest/v1/fotos?order=criado_em.desc`,
+      { headers: this.getHeaders() }
+    );
 
-      if (!response.ok) throw new Error();
-      return await response.json();
-
-    } catch (error) {
-      console.error(error);
-      return [];
-    }
+    if (!response.ok) return [];
+    return await response.json();
   }
 
   async insertFoto(url) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/fotos`,
-        {
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify({ url })
-        }
-      );
+    const response = await fetch(
+      `${this.url}/rest/v1/fotos`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ url })
+      }
+    );
 
-      return response.ok;
-
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
+    return response.ok;
   }
 
   async deleteFoto(id) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/fotos?id=eq.${id}`,
-        {
-          method: 'DELETE',
-          headers: this.getHeaders()
-        }
-      );
+    const response = await fetch(
+      `${this.url}/rest/v1/fotos?id=eq.${id}`,
+      {
+        method: 'DELETE',
+        headers: this.getHeaders()
+      }
+    );
 
-      return response.ok;
-
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
+    return response.ok;
   }
 
   async getAgenda() {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/agenda?order=data.asc`,
-        { headers: this.getHeaders() }
-      );
+    const response = await fetch(
+      `${this.url}/rest/v1/agenda?order=data.asc`,
+      { headers: this.getHeaders() }
+    );
 
-      if (!response.ok) throw new Error();
-      return await response.json();
-
-    } catch (error) {
-      console.error(error);
-      return [];
-    }
+    if (!response.ok) return [];
+    return await response.json();
   }
 
   async insertAgenda(titulo, data, mensagem) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/agenda`,
-        {
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify({ titulo, data, mensagem })
-        }
-      );
+    const response = await fetch(
+      `${this.url}/rest/v1/agenda`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ titulo, data, mensagem })
+      }
+    );
 
-      return response.ok;
-
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
+    return response.ok;
   }
 
   async deleteAgenda(id) {
-    try {
-      const response = await fetch(
-        `${this.url}/rest/v1/agenda?id=eq.${id}`,
-        {
-          method: 'DELETE',
-          headers: this.getHeaders()
-        }
-      );
+    const response = await fetch(
+      `${this.url}/rest/v1/agenda?id=eq.${id}`,
+      {
+        method: 'DELETE',
+        headers: this.getHeaders()
+      }
+    );
 
-      return response.ok;
-
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
+    return response.ok;
   }
 }
+
 
 // ============================================================================
 // CLOUDINARY
@@ -314,115 +192,101 @@ class CloudinaryAPI {
   }
 
   async uploadImage(file) {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', this.uploadPreset);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', this.uploadPreset);
 
-      const response = await fetch(this.uploadUrl, {
-        method: 'POST',
-        body: formData
-      });
+    const response = await fetch(this.uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
 
-      if (!response.ok) throw new Error();
-      const data = await response.json();
-      return data.secure_url;
-
-    } catch (error) {
-      console.error(error);
-      return null;
-    }
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.secure_url;
   }
 }
+
+
 // ============================================================================
-// UTILITÁRIOS
+// THEME MANAGER
 // ============================================================================
 
-function showNotification(message, type = 'info') {
-  const notification = document.createElement('div');
-  notification.className = `notification notification-${type}`;
-  notification.textContent = message;
-  document.body.appendChild(notification);
+class ThemeManager {
+  constructor() {
+    this.isDark = localStorage.getItem('theme_dark') === 'true';
+    this.applyTheme();
+  }
 
-  setTimeout(() => {
-    notification.classList.add('fade-out');
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
-}
+  applyTheme() {
+    const html = document.documentElement;
+    this.isDark ? html.classList.add('dark') : html.classList.remove('dark');
+  }
 
-function copyToClipboard(text) {
-  navigator.clipboard.writeText(text)
-    .then(() => showNotification('Copiado para a área de transferência!', 'success'))
-    .catch(() => showNotification('Erro ao copiar', 'error'));
-}
-
-function downloadFile(content, filename, type = 'application/json') {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-async function checkAuth() {
-  const { data } = await supabaseClient.auth.getSession();
-
-  if (!data.session) {
-    window.location.href = './login.html';
+  toggle() {
+    this.isDark = !this.isDark;
+    localStorage.setItem('theme_dark', this.isDark);
+    this.applyTheme();
   }
 }
+
+
+// ============================================================================
+// INSTÂNCIAS GLOBAIS
+// ============================================================================
+
+window.supabaseApi = new SupabaseAPI(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.cloudinary = new CloudinaryAPI(CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET);
+window.themeManager = new ThemeManager();
+
+window.supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
+
+// ============================================================================
+// PROTEÇÃO GLOBAL
+// ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
 
   const BASE_PATH = '/siteEM';
-  const isLoginPage = window.location.pathname.includes('./login.html');
+  const isLoginPage = window.location.pathname.includes('login.html');
 
-  try {
+  const { data } = await supabaseClient.auth.getSession();
+  const session = data.session;
 
-    const { data, error } = await supabaseClient.auth.getSession();
-
-    if (error) {
-      console.error(error);
-      window.location.replace(`${BASE_PATH}./login.html`);
-      return;
-    }
-
-    const session = data.session;
-
-    if (!session && !isLoginPage) {
-      window.location.replace(`${BASE_PATH}./login.html`);
-      return;
-    }
-
-    if (session && isLoginPage) {
-      window.location.replace(`${BASE_PATH}./index.html`);
-      return;
-    }
-
-    // 🔓 REMOVE O BLOQUEIO VISUAL
-    const authLoading = document.getElementById('authLoading');
-    if (authLoading) {
-      authLoading.remove();
-    }
-
-  } catch (err) {
-    console.error(err);
-    window.location.replace(`${BASE_PATH}./login.html`);
+  if (!session && !isLoginPage) {
+    window.location.replace(`${BASE_PATH}/login.html`);
+    return;
   }
 
+  if (session && isLoginPage) {
+    window.location.replace(`${BASE_PATH}/index.html`);
+    return;
+  }
+
+  const authLoading = document.getElementById('authLoading');
+  if (authLoading) authLoading.remove();
 });
+
+
+// Logout global
+document.addEventListener('click', async (e) => {
+  if (e.target.id === 'logoutBtn') {
+    await supabaseClient.auth.signOut();
+    window.location.replace('/siteEM/login.html');
+  }
+});
+
+
 // ============================================================================
-// SERVICE WORKER REGISTRATION (PWA)
+// SERVICE WORKER
 // ============================================================================
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(registration => console.log('Service Worker registrado:', registration))
-      .catch(error => console.log('Erro ao registrar Service Worker:', error));
+    navigator.serviceWorker.register('sw.js');
   });
 }
