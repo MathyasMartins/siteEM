@@ -368,6 +368,30 @@ function downloadFile(content, filename, type = 'application/json') {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+async function checkAuth() {
+  const { data } = await supabaseClient.auth.getSession();
+
+  if (!data.session) {
+    window.location.href = './login.html';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const isLoginPage = window.location.pathname.includes('./login.html');
+
+  if (!isLoginPage) {
+    checkAuth();
+  }
+});
+
+supabaseClient.auth.onAuthStateChange((_event, session) => {
+  const isLoginPage = window.location.pathname.includes('./login.html');
+
+  if (!session && !isLoginPage) {
+    window.location.href = './login.html';
+  }
+});
 // ============================================================================
 // SERVICE WORKER REGISTRATION (PWA)
 // ============================================================================
