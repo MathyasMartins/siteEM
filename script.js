@@ -379,28 +379,36 @@ async function checkAuth() {
 
 document.addEventListener('DOMContentLoaded', async () => {
 
+  const BASE_PATH = '/siteEM';
+
   const isLoginPage = window.location.pathname.includes('login.html');
 
   const { data: { session } } = await supabaseClient.auth.getSession();
 
+  // 🔒 Se NÃO estiver logado e NÃO for a página de login → manda para login
   if (!session && !isLoginPage) {
-    window.location.replace('./login.html');
+    window.location.replace(`${BASE_PATH}/login.html`);
     return;
   }
 
+  // 🔁 Se estiver logado e tentar acessar login → manda para index
   if (session && isLoginPage) {
-    window.location.replace('./index.html');
+    window.location.replace(`${BASE_PATH}/index.html`);
     return;
   }
 
 });
 
+// 🔄 Se deslogar em qualquer momento → volta para login
 supabaseClient.auth.onAuthStateChange((_event, session) => {
+
+  const BASE_PATH = '/siteEM';
   const isLoginPage = window.location.pathname.includes('login.html');
 
   if (!session && !isLoginPage) {
-    window.location.replace('./login.html');
+    window.location.replace(`${BASE_PATH}/login.html`);
   }
+
 });
 // ============================================================================
 // SERVICE WORKER REGISTRATION (PWA)
