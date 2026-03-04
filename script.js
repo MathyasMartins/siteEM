@@ -535,7 +535,7 @@ const adminAuth = new AdminAuth();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('sw.js')
       .then(registration => console.log('Service Worker registrado:', registration))
       .catch(error => console.log('Erro ao registrar Service Worker:', error));
   });
