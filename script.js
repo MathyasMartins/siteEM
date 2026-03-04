@@ -33,26 +33,17 @@ class SupabaseAPI {
       'Content-Type': 'application/json'
     };
   }
+
+  // Buscar configurações
   async getConfig() {
     try {
       const response = await fetch(
-        `${this.url}/rest/v1/config?select=*`,
+        `${this.url}/rest/v1/config?id=eq.1`,
         { headers: this.getHeaders() }
       );
-
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar config: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`Erro ao buscar config: ${response.status}`);
       const data = await response.json();
-
-      if (!data || data.length === 0) {
-        console.warn("Nenhuma configuração encontrada.");
-        return null;
-      }
-
-      return data[0]; // pega a primeira linha
-
+      return data[0] || null;
     } catch (error) {
       console.error('Erro ao buscar config:', error);
       return null;
