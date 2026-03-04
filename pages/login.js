@@ -3,7 +3,13 @@ const submitBtn = document.getElementById('submitBtn');
 
 // Se já estiver logado, redireciona
 window.addEventListener('DOMContentLoaded', async () => {
-  const { data } = await supabaseClient.auth.getSession();
+
+  if (!window.supabaseClient) {
+    console.error('supabaseClient não encontrado');
+    return;
+  }
+
+  const { data } = await window.supabaseClient.auth.getSession();
 
   if (data.session) {
     window.location.href = './index.html';
@@ -11,6 +17,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 submitBtn.addEventListener('click', async () => {
+
   errorMessage.textContent = '';
 
   const email = document.getElementById('email').value;
@@ -21,7 +28,7 @@ submitBtn.addEventListener('click', async () => {
     return;
   }
 
-  const { error } = await supabaseClient.auth.signInWithPassword({
+  const { error } = await window.supabaseClient.auth.signInWithPassword({
     email,
     password
   });
@@ -32,11 +39,12 @@ submitBtn.addEventListener('click', async () => {
     window.location.href = './index.html';
   }
 });
+
 // Botão de alternar tema
 const themeToggle = document.getElementById('themeToggle');
 
-if (themeToggle) {
+if (themeToggle && window.themeManager) {
   themeToggle.addEventListener('click', () => {
-    themeManager.toggle();
+    window.themeManager.toggle();
   });
 }
