@@ -983,60 +983,7 @@ footer {
 .opacity-75 {
   opacity: 0.75;
 }
-body {
-  font-family: Arial, sans-serif;
-  background: #111;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
 
-.login-box {
-  background: #1e1e1e;
-  padding: 30px;
-  border-radius: 10px;
-  width: 320px;
-}
-
-input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border-radius: 5px;
-  border: none;
-}
-
-button {
-  width: 100%;
-  padding: 10px;
-  
-  border: none;
-  border-radius: 5px;
-  background: #e91e63;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.9;
-}
-
-.toggle {
-  margin-top: 15px;
-  text-align: center;
-  cursor: pointer;
-  color: #ccc;
-  font-size: 14px;
-}
-
-.error {
-  color: #ff4d4d;
-  margin-bottom: 10px;
-  font-size: 14px;
-}
 /* ============================================================================
    FIM DO STYLESHEET
    ============================================================================ */

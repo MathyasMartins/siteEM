@@ -32,3 +32,11 @@ submitBtn.addEventListener('click', async () => {
     window.location.href = './index.html';
   }
 });
+// Botão de alternar tema
+const themeToggle = document.getElementById('themeToggle');
+
+if (themeToggle) {
+  themeToggle.addEventListener('click', () => {
+    themeManager.toggle();
+  });
+}

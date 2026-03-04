@@ -1,31 +1,36 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="login.css">
 
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-
 <body>
 
-    <div class="login-box">
-        <h2 id="formTitle">Entrar</h2>
+<div class="login-container">
 
-        <div id="errorMessage" class="error"></div>
+  <div class="theme-toggle" id="themeToggle">🌙</div>
 
-        <input type="email" id="email" placeholder="Email" required>
-        <input type="password" id="password" placeholder="Senha" required>
+  <div class="login-box">
+    <h2>Bem-vindo 💖</h2>
 
-        <button id="submitBtn">Entrar</button>
-    </div>
+    <div id="errorMessage" class="error"></div>
 
-    <script src="script.js"></script> <!-- cria supabaseClient -->
-    <script src="pages/login.js"></script> <!-- usa supabaseClient -->
+    <input type="email" id="email" placeholder="Seu email" required>
+    <input type="password" id="password" placeholder="Sua senha" required>
+
+    <button id="submitBtn">Entrar</button>
+  </div>
+
+</div>
+
+<script src="/script.js"></script>
+<script src="./pages/login.js"></script>
+
 </body>
 </html>
