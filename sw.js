@@ -61,45 +61,49 @@ self.addEventListener('activate', (event) => {
 // ============================================================================
 
 self.addEventListener('fetch', (event) => {
+
+  const url = new URL(event.request.url);
+
+  // NÃO CACHEAR APIS
+  if (
+    url.pathname.includes('/rest/v1/') ||
+    url.hostname.includes('supabase.co') ||
+    url.hostname.includes('cloudinary.com')
+  ) {
+    return; // deixa a requisição ir direto para a internet
+  }
+
   // Apenas GET requests
   if (event.request.method !== 'GET') {
     return;
   }
 
-  // Estratégia: Cache first, fallback to network
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Se encontrou no cache, retornar
+
         if (response) {
           return response;
         }
 
-        // Caso contrário, fazer requisição de rede
-        return fetch(event.request)
-          .then((response) => {
-            // Não cachear requisições não-sucesso
-            if (!response || response.status !== 200 || response.type === 'error') {
-              return response;
-            }
+        return fetch(event.request).then((response) => {
 
-            // Clonar a resposta
-            const responseToCache = response.clone();
-
-            // Cachear a resposta
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
+          if (!response || response.status !== 200 || response.type === 'error') {
             return response;
-          })
-          .catch(() => {
-            // Se offline e não está em cache, retornar página offline
-            return caches.match('/index.html');
+          }
+
+          const responseToCache = response.clone();
+
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
           });
+
+          return response;
+        });
+
       })
   );
+
 });
 
 // ============================================================================
