@@ -1,10 +1,9 @@
 // ============================================================================
 // SERVICE WORKER - PWA (Progressive Web App)
 // ============================================================================
-// Gerencia cache de arquivos para funcionamento offline
-// ============================================================================
 
-const CACHE_NAME = 'site-romantico-v1';
+const CACHE_NAME = 'site-romantico-v2';
+
 const urlsToCache = [
   '/',
   '/index.html',
@@ -25,16 +24,20 @@ const urlsToCache = [
 // ============================================================================
 
 self.addEventListener('install', (event) => {
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
+        console.log('Cache aberto');
         return cache.addAll(urlsToCache);
       })
       .catch((error) => {
         console.log('Erro ao cachear arquivos:', error);
       })
   );
+
   self.skipWaiting();
+
 });
 
 // ============================================================================
@@ -42,18 +45,26 @@ self.addEventListener('install', (event) => {
 // ============================================================================
 
 self.addEventListener('activate', (event) => {
+
   event.waitUntil(
     caches.keys().then((cacheNames) => {
+
       return Promise.all(
         cacheNames.map((cacheName) => {
+
           if (cacheName !== CACHE_NAME) {
+            console.log('Deletando cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
+
         })
       );
+
     })
   );
+
   self.clients.claim();
+
 });
 
 // ============================================================================
@@ -61,45 +72,81 @@ self.addEventListener('activate', (event) => {
 // ============================================================================
 
 self.addEventListener('fetch', (event) => {
-  // Apenas GET requests
+
+  const url = new URL(event.request.url);
+
+  // --------------------------------------------------------------------------
+  // NÃO INTERCEPTAR APIS OU SERVIÇOS EXTERNOS
+  // --------------------------------------------------------------------------
+
+  if (
+    url.pathname.includes('/rest/v1/') ||
+    url.hostname.includes('supabase.co') ||
+    url.hostname.includes('cloudinary.com') ||
+    url.hostname.includes('onesignal.com') ||
+    url.hostname.includes('cdn.onesignal.com')
+  ) {
+    return; // deixa ir direto para internet
+  }
+
+  // --------------------------------------------------------------------------
+  // APENAS REQUISIÇÕES GET
+  // --------------------------------------------------------------------------
+
   if (event.request.method !== 'GET') {
     return;
   }
 
-  // Estratégia: Cache first, fallback to network
+  // --------------------------------------------------------------------------
+  // CACHE FIRST (offline support)
+  // --------------------------------------------------------------------------
+
   event.respondWith(
+
     caches.match(event.request)
-      .then((response) => {
-        // Se encontrou no cache, retornar
-        if (response) {
-          return response;
+
+      .then((cachedResponse) => {
+
+        if (cachedResponse) {
+          return cachedResponse;
         }
 
-        // Caso contrário, fazer requisição de rede
         return fetch(event.request)
-          .then((response) => {
-            // Não cachear requisições não-sucesso
-            if (!response || response.status !== 200 || response.type === 'error') {
-              return response;
+
+          .then((networkResponse) => {
+
+            if (
+              !networkResponse ||
+              networkResponse.status !== 200 ||
+              networkResponse.type === 'error'
+            ) {
+              return networkResponse;
             }
 
-            // Clonar a resposta
-            const responseToCache = response.clone();
+            const responseToCache = networkResponse.clone();
 
-            // Cachear a resposta
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
               });
 
-            return response;
+            return networkResponse;
+
           })
+
           .catch(() => {
-            // Se offline e não está em cache, retornar página offline
-            return caches.match('/index.html');
+
+            // fallback offline opcional
+            if (event.request.destination === 'document') {
+              return caches.match('/index.html');
+            }
+
           });
+
       })
+
   );
+
 });
 
 // ============================================================================
