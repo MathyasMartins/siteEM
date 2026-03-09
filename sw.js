@@ -75,19 +75,27 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // --------------------------------------------------------------------------
+  // NÃO INTERCEPTAR REQUISIÇÕES EXTERNAS (CDN, APIs, etc)
+  // --------------------------------------------------------------------------
+
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // --------------------------------------------------------------------------
   // NÃO INTERCEPTAR APIS OU SERVIÇOS EXTERNOS
   // --------------------------------------------------------------------------
 
   if (
-  url.pathname.includes('/rest/v1/') ||
-  url.hostname.includes('supabase.co') ||
-  url.hostname.includes('cloudinary.com') ||
-  url.hostname.includes('onesignal.com') ||
-  url.hostname.includes('cdn.onesignal.com')
-) {
-  event.respondWith(fetch(event.request));
-  return;
-}
+    url.pathname.includes('/rest/v1/') ||
+    url.hostname.includes('supabase.co') ||
+    url.hostname.includes('cloudinary.com') ||
+    url.hostname.includes('onesignal.com') ||
+    url.hostname.includes('cdn.onesignal.com')
+  ) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   // --------------------------------------------------------------------------
   // APENAS REQUISIÇÕES GET

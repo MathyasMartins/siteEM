@@ -75,6 +75,14 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // --------------------------------------------------------------------------
+  // NÃO INTERCEPTAR REQUISIÇÕES EXTERNAS (CDN, APIs, etc)
+  // --------------------------------------------------------------------------
+
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // --------------------------------------------------------------------------
   // NÃO INTERCEPTAR APIS OU SERVIÇOS EXTERNOS
   // --------------------------------------------------------------------------
 
