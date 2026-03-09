@@ -1,7 +1,7 @@
 // ============================================================================
 // SERVICE WORKER - PWA (Progressive Web App)
 // ============================================================================
-
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 const CACHE_NAME = 'site-romantico-v2';
 
 const urlsToCache = [
