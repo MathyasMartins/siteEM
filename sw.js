@@ -79,14 +79,15 @@ self.addEventListener('fetch', (event) => {
   // --------------------------------------------------------------------------
 
   if (
-    url.pathname.includes('/rest/v1/') ||
-    url.hostname.includes('supabase.co') ||
-    url.hostname.includes('cloudinary.com') ||
-    url.hostname.includes('onesignal.com') ||
-    url.hostname.includes('cdn.onesignal.com')
-  ) {
-    return; // deixa ir direto para internet
-  }
+  url.pathname.includes('/rest/v1/') ||
+  url.hostname.includes('supabase.co') ||
+  url.hostname.includes('cloudinary.com') ||
+  url.hostname.includes('onesignal.com') ||
+  url.hostname.includes('cdn.onesignal.com')
+) {
+  event.respondWith(fetch(event.request));
+  return;
+}
 
   // --------------------------------------------------------------------------
   // APENAS REQUISIÇÕES GET

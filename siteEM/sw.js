@@ -85,7 +85,8 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('onesignal.com') ||
     url.hostname.includes('cdn.onesignal.com')
   ) {
-    return; // deixa ir direto para internet
+    event.respondWith(fetch(event.request));
+    return;
   }
 
   // --------------------------------------------------------------------------
