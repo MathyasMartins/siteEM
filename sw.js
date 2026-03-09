@@ -1,21 +1,22 @@
 // ============================================================================
 // SERVICE WORKER - PWA (Progressive Web App)
 // ============================================================================
+
 const CACHE_NAME = 'site-romantico-v2';
 
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/galeria.html',
-  '/admin.html',
-  '/surpresa.html',
-  '/style.css',
-  '/script.js',
-  '/manifest.json',
-  '/pages/index.js',
-  '/pages/galeria.js',
-  '/pages/admin.js',
-  '/pages/surpresa.js'
+  '/siteEM/',
+  '/siteEM/index.html',
+  '/siteEM/galeria.html',
+  '/siteEM/admin.html',
+  '/siteEM/surpresa.html',
+  '/siteEM/style.css',
+  '/siteEM/script.js',
+  '/siteEM/manifest.json',
+  '/siteEM/pages/index.js',
+  '/siteEM/pages/galeria.js',
+  '/siteEM/pages/admin.js',
+  '/siteEM/pages/surpresa.js'
 ];
 
 // ============================================================================
@@ -75,7 +76,15 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // --------------------------------------------------------------------------
-  // NÃO INTERCEPTAR REQUISIÇÕES EXTERNAS (CDN, APIs, etc)
+  // NÃO INTERFERIR COM ONESIGNAL
+  // --------------------------------------------------------------------------
+
+  if (event.request.url.includes("OneSignal")) {
+    return;
+  }
+
+  // --------------------------------------------------------------------------
+  // NÃO INTERCEPTAR REQUISIÇÕES EXTERNAS
   // --------------------------------------------------------------------------
 
   if (url.origin !== self.location.origin) {
@@ -144,9 +153,8 @@ self.addEventListener('fetch', (event) => {
 
           .catch(() => {
 
-            // fallback offline opcional
             if (event.request.destination === 'document') {
-              return caches.match('/index.html');
+              return caches.match('/siteEM/index.html');
             }
 
           });
