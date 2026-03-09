@@ -20,7 +20,8 @@
 
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"></script>
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
   <script>
     window.OneSignalDeferred = window.OneSignalDeferred || [];
 
@@ -29,10 +30,11 @@
       await OneSignal.init({
         appId: "2b57737b-ddcc-4a31-867e-ea7aaa92dc03",
 
-        serviceWorkerPath: "/siteEM/OneSignalSDKWorker.js",
-        serviceWorkerUpdaterPath: "/siteEM/OneSignalSDKUpdaterWorker.js",
+        serviceWorkerPath: "OneSignalSDKWorker.js",
+        serviceWorkerUpdaterPath: "OneSignalSDKUpdaterWorker.js",
 
         path: "/siteEM/",
+        scope: "/siteEM/",
 
         notifyButton: {
           enable: true
