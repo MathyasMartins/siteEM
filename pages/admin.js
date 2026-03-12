@@ -84,7 +84,7 @@ async function loadPhotosSection() {
         if (!result) throw new Error('Erro ao salvar foto no Supabase');
 
         const user = authManager.getUser();
-        oneSignalManager.notifyOnce(`foto-${url}`, 'Nova foto', `${user?.email || 'Usuário'} adicionou uma nova foto.`);
+        oneSignalManager.notifyOnce(`foto-${uploaded.publicId || Date.now()}`, 'Nova foto', `${user?.email || 'Usuário'} adicionou uma nova foto.`);
         showNotification('Foto enviada com sucesso!', 'success');
         fileInput.value = '';
         await loadPhotosSection();

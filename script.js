@@ -189,14 +189,36 @@ class SupabaseAPI {
   // Inserir foto
   async insertFoto(url, publicId = null) {
     try {
-      const response = await fetch(
+      const payload = { url: url };
+      if (publicId) {
+        payload.public_id = publicId;
+      }
+
+      let response = await fetch(
         `${this.url}/rest/v1/fotos`,
         {
           method: 'POST',
           headers: this.getHeaders(),
-          body: JSON.stringify({ url: url, public_id: publicId })
+          body: JSON.stringify(payload)
         }
       );
+
+      // Compatibilidade com schemas antigos sem a coluna `public_id`
+      if (!response.ok && publicId) {
+        const responseText = await response.text();
+        const missingPublicIdColumn = responseText.includes('public_id') && responseText.includes('column');
+
+        if (response.status === 400 && missingPublicIdColumn) {
+          response = await fetch(
+            `${this.url}/rest/v1/fotos`,
+            {
+              method: 'POST',
+              headers: this.getHeaders(),
+              body: JSON.stringify({ url: url })
+            }
+          );
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`Erro ao inserir foto: ${response.status}`);
@@ -568,11 +590,21 @@ class OneSignalManager {
 
   async init() {
     if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
+
+    const isGithubPages = window.location.hostname.endsWith('github.io');
+    const projectPath = window.location.pathname.split('/').filter(Boolean)[0] || '';
+    const basePath = isGithubPages && projectPath ? `/${projectPath}` : '';
+    const workerPath = `${basePath}/OneSignalSDKWorker.js`;
+    const updaterWorkerPath = `${basePath}/OneSignalSDKUpdaterWorker.js`;
+    const workerScope = `${basePath}/`;
+
     window.OneSignalDeferred.push(async (OneSignal) => {
       await OneSignal.init({
         appId: ONE_SIGNAL_APP_ID,
-        serviceWorkerPath: 'OneSignalSDKWorker.js',
-        serviceWorkerUpdaterPath: 'OneSignalSDKUpdaterWorker.js',
+        serviceWorkerPath: workerPath,
+        serviceWorkerUpdaterPath: updaterWorkerPath,
+        path: workerScope,
+        serviceWorkerParam: { scope: workerScope },
         notifyButton: { enable: true }
       });
       this.ready = true;
