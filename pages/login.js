@@ -28,24 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = 'index.html';
   });
 
-  signupBtn?.addEventListener('click', async () => {
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-
-    if (!email || !password || password.length < 6) {
-      showNotification('Informe email e senha com no mínimo 6 caracteres.', 'warning');
-      return;
-    }
-
-    const result = await authManager.signUp(email, password);
-    if (!result) {
-      showNotification('Não foi possível criar conta.', 'error');
-      return;
-    }
-
-    showNotification('Conta criada! Agora faça login.', 'success');
-  });
-
   document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
 });
 
