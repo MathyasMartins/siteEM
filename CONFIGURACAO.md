@@ -172,37 +172,88 @@ Acesse a URL gerada pelo GitHub Pages e seu site estará ao vivo!
 
 ## 🔔 Notificações (Realtime + Edge Function + OneSignal)
 
-Além do código do site, **essas configurações são obrigatórias** para o sistema de notificações funcionar em produção.
+> Esta parte é **100% obrigatória** para o pipeline completo de notificações funcionar (in-app realtime + email + push).
 
-### 1) Banco de dados: tabela `notificacoes` + políticas
+---
 
-1. Reexecute o `SUPABASE_SCHEMA.sql` (ou aplique apenas o bloco de `notificacoes`).
-2. Confirme no Supabase:
-   - tabela `notificacoes` criada
-   - RLS habilitado
-   - políticas `notificacoes_read_auth`, `notificacoes_insert_auth`, `notificacoes_update_auth`
+### ✅ Visão rápida do que você vai configurar
 
-### 2) Realtime do Supabase
+Você vai executar 8 etapas, nesta ordem:
 
-1. Acesse **Database → Replication** no Supabase.
-2. Garanta que a tabela `public.notificacoes` esteja incluída na publicação do Realtime.
-3. Se necessário, habilite Realtime para essa tabela.
+1. Confirmar tabela/policies no banco (`notificacoes`)
+2. Habilitar Realtime para `public.notificacoes`
+3. Instalar e autenticar Supabase CLI
+4. Vincular o projeto local ao projeto do Supabase
+5. Cadastrar secrets da Edge Function
+6. Fazer deploy da Edge Function `notificacoes-dispatch`
+7. Configurar OneSignal para Web Push (incluindo workers)
+8. Validar ponta a ponta
 
-### 3) Deploy da Edge Function `notificacoes-dispatch`
+---
 
-No terminal com Supabase CLI:
+### Passo 1) Confirmar tabela `notificacoes` e políticas (RLS)
+
+1. Abra o **Supabase Dashboard**.
+2. Entre em **SQL Editor**.
+3. Execute o `SUPABASE_SCHEMA.sql` completo (ou somente o bloco de `notificacoes`, se já tiver todo o restante).
+4. Vá em **Table Editor** e confirme:
+   - tabela `notificacoes` existe
+   - colunas esperadas existem (`tipo`, `mensagem`, `autor_email`, `destino_email`, `referencia_id`, `lida`, `created_at`)
+5. Vá em **Authentication → Policies** e confirme as políticas da tabela:
+   - `notificacoes_read_auth`
+   - `notificacoes_insert_auth`
+   - `notificacoes_update_auth`
+
+> Se essas políticas não existirem, o frontend não conseguirá ler/inserir/atualizar notificações corretamente.
+
+---
+
+### Passo 2) Habilitar Realtime da tabela `public.notificacoes`
+
+1. No dashboard do Supabase, acesse **Database → Replication**.
+2. Verifique se a tabela `public.notificacoes` está incluída na publicação do Realtime.
+3. Se não estiver, habilite/adicione.
+4. Salve alterações.
+
+> Sem isso, as notificações não aparecem em tempo real na interface.
+
+---
+
+### Passo 3) Instalar e autenticar Supabase CLI
+
+Se ainda não tiver o CLI instalado:
 
 ```bash
-supabase functions deploy notificacoes-dispatch
+npm install -g supabase
 ```
 
-A função está em:
+Depois faça login:
 
-- `supabase/functions/notificacoes-dispatch/index.ts`
+```bash
+supabase login
+```
 
-### 4) Secrets obrigatórios da Edge Function
+> O comando abrirá o navegador para autenticação.
 
-Configure os secrets (nunca no frontend):
+---
+
+### Passo 4) Vincular o projeto local ao projeto Supabase
+
+No diretório do projeto:
+
+```bash
+supabase link --project-ref SEU_PROJECT_REF
+```
+
+Como descobrir o `project-ref`:
+- normalmente é o trecho antes de `.supabase.co` na URL do projeto.
+- exemplo: `https://abcxyz123.supabase.co` → `project-ref = abcxyz123`
+
+---
+
+### Passo 5) Cadastrar os secrets da Edge Function
+
+Configure os secrets abaixo (são obrigatórios para produção):
 
 ```bash
 supabase secrets set SUPABASE_URL=https://SEU_PROJETO.supabase.co
@@ -213,25 +264,111 @@ supabase secrets set ONESIGNAL_REST_API_KEY=SUA_CHAVE_REST_ONESIGNAL
 supabase secrets set ONESIGNAL_APP_ID=SEU_APP_ID_ONESIGNAL
 ```
 
-> Se `RESEND_API_KEY` e/ou `ONESIGNAL_REST_API_KEY` não estiverem configurados, a função continuará respondendo, mas os envios correspondentes serão ignorados.
+#### Como obter cada secret
 
-### 5) OneSignal + Service Worker no GitHub Pages
+- `SUPABASE_URL`:
+  - Supabase → **Settings → API**
+- `SUPABASE_SERVICE_ROLE_KEY`:
+  - Supabase → **Settings → API** (chave **service_role**, manter em segredo)
+- `RESEND_API_KEY`:
+  - Dashboard da Resend → API Keys
+- `EMAIL_FROM`:
+  - Remetente validado na Resend (domínio/email verificado)
+- `ONESIGNAL_REST_API_KEY`:
+  - OneSignal → Settings → Keys & IDs
+- `ONESIGNAL_APP_ID`:
+  - OneSignal → App Settings
 
-Garanta que estes arquivos existam na raiz publicada do projeto:
+> Nunca coloque esses valores no frontend (`script.js`, HTML etc).
+
+---
+
+### Passo 6) Deploy da Edge Function
+
+A função está neste caminho:
+
+- `supabase/functions/notificacoes-dispatch/index.ts`
+
+Faça deploy:
+
+```bash
+supabase functions deploy notificacoes-dispatch
+```
+
+Opcional (teste local):
+
+```bash
+supabase functions serve notificacoes-dispatch --env-file .env.local
+```
+
+---
+
+### Passo 7) Configurar OneSignal Web Push + Service Workers
+
+Para GitHub Pages, confirme que os workers estão publicados na raiz do site:
 
 - `/OneSignalSDKWorker.js`
 - `/OneSignalSDKUpdaterWorker.js`
 
-Sem isso, o OneSignal pode falhar com `404` no worker.
+Checklist:
 
-### 6) Ordem esperada de funcionamento
+1. Os arquivos existem no repositório.
+2. Eles estão sendo enviados no deploy.
+3. A URL final responde `200` (não 404).
 
-1. Usuário executa ação (recado, imagem, surpresa, agenda).
-2. Frontend grava em `notificacoes`.
-3. Realtime atualiza interface em tempo real.
-4. Frontend chama `functions/v1/notificacoes-dispatch`.
-5. Edge Function envia email/push para destinatários (exceto autor).
+Exemplo de teste rápido no navegador:
+- `https://SEU_USUARIO.github.io/SEU_REPO/OneSignalSDKWorker.js`
 
+> Se retornar 404, push em segundo plano não funcionará.
+
+---
+
+### Passo 8) Validação ponta a ponta (checklist final)
+
+Depois de tudo configurado, valide assim:
+
+1. Faça login com dois usuários diferentes (A e B).
+2. Com usuário A, crie um recadinho.
+3. Verifique:
+   - inserção na tabela `notificacoes`
+   - usuário B recebeu aviso em tempo real no site
+   - email foi enviado para B (via Resend)
+   - push foi disparado (OneSignal)
+4. Repita para:
+   - upload de imagem
+   - criação de surpresa
+   - criação de data na agenda
+
+Se algum item falhar:
+- cheque logs da Edge Function no Supabase
+- confira secrets
+- confira Realtime da tabela
+- confira workers do OneSignal (404)
+
+---
+
+### Fluxo esperado de funcionamento
+
+```text
+evento do usuário (recado/imagem/surpresa/agenda)
+↓
+frontend grava em public.notificacoes
+↓
+realtime atualiza interface
+↓
+frontend chama /functions/v1/notificacoes-dispatch
+↓
+edge function envia email + push (exceto autor)
+```
+
+---
+
+### Observações importantes
+
+- Sem `SUPABASE_SERVICE_ROLE_KEY`, a função não conseguirá consultar destinatários com segurança.
+- Sem `RESEND_API_KEY`, o sistema continua funcionando, mas sem email.
+- Sem `ONESIGNAL_REST_API_KEY`, o sistema continua funcionando, mas sem push.
+- Sem Realtime da tabela `notificacoes`, a notificação só chega por canais externos (email/push), não instantaneamente na UI.
 
 ---
 
