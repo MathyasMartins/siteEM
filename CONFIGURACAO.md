@@ -10,8 +10,9 @@ Este documento fornece instruções passo a passo para configurar o Supabase, Cl
 2. [Configuração do Cloudinary](#configuração-do-cloudinary)
 3. [Configuração do Projeto](#configuração-do-projeto)
 4. [Publicação no GitHub Pages](#publicação-no-github-pages)
-5. [Exemplos de Chamadas REST](#exemplos-de-chamadas-rest)
-6. [Troubleshooting](#troubleshooting)
+5. [Notificações (Realtime + Edge Function + OneSignal)](#-notificações-realtime--edge-function--onesignal)
+6. [Exemplos de Chamadas REST](#-exemplos-de-chamadas-rest)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -166,6 +167,209 @@ git push -u origin main
 
 Acesse a URL gerada pelo GitHub Pages e seu site estará ao vivo!
 
+
+---
+
+## 🔔 Notificações (Realtime + Edge Function + OneSignal)
+
+> Esta parte é **100% obrigatória** para o pipeline completo de notificações funcionar (in-app realtime + email + push).
+
+---
+
+### ✅ Visão rápida do que você vai configurar
+
+Você vai executar 8 etapas, nesta ordem:
+
+1. Confirmar tabela/policies no banco (`notificacoes`)
+2. Habilitar Realtime para `public.notificacoes`
+3. Instalar e autenticar Supabase CLI
+4. Vincular o projeto local ao projeto do Supabase
+5. Cadastrar secrets da Edge Function
+6. Fazer deploy da Edge Function `notificacoes-dispatch`
+7. Configurar OneSignal para Web Push (incluindo workers)
+8. Validar ponta a ponta
+
+---
+
+### Passo 1) Confirmar tabela `notificacoes` e políticas (RLS)
+
+1. Abra o **Supabase Dashboard**.
+2. Entre em **SQL Editor**.
+3. Execute o `SUPABASE_SCHEMA.sql` completo (ou somente o bloco de `notificacoes`, se já tiver todo o restante).
+4. Vá em **Table Editor** e confirme:
+   - tabela `notificacoes` existe
+   - colunas esperadas existem (`tipo`, `mensagem`, `autor_email`, `destino_email`, `referencia_id`, `lida`, `created_at`)
+5. Vá em **Authentication → Policies** e confirme as políticas da tabela:
+   - `notificacoes_read_auth`
+   - `notificacoes_insert_auth`
+   - `notificacoes_update_auth`
+
+> Se essas políticas não existirem, o frontend não conseguirá ler/inserir/atualizar notificações corretamente.
+
+---
+
+### Passo 2) Habilitar Realtime da tabela `public.notificacoes`
+
+1. No dashboard do Supabase, acesse **Database → Replication**.
+2. Verifique se a tabela `public.notificacoes` está incluída na publicação do Realtime.
+3. Se não estiver, habilite/adicione.
+4. Salve alterações.
+
+> Sem isso, as notificações não aparecem em tempo real na interface.
+
+---
+
+### Passo 3) Instalar e autenticar Supabase CLI
+
+Se ainda não tiver o CLI instalado:
+
+```bash
+npm install -g supabase
+```
+
+Depois faça login:
+
+```bash
+supabase login
+```
+
+> O comando abrirá o navegador para autenticação.
+
+---
+
+### Passo 4) Vincular o projeto local ao projeto Supabase
+
+No diretório do projeto:
+
+```bash
+supabase link --project-ref SEU_PROJECT_REF
+```
+
+Como descobrir o `project-ref`:
+- normalmente é o trecho antes de `.supabase.co` na URL do projeto.
+- exemplo: `https://abcxyz123.supabase.co` → `project-ref = abcxyz123`
+
+---
+
+### Passo 5) Cadastrar os secrets da Edge Function
+
+Configure os secrets abaixo (são obrigatórios para produção):
+
+```bash
+supabase secrets set SUPABASE_URL=https://SEU_PROJETO.supabase.co
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY=SEU_SERVICE_ROLE_KEY
+supabase secrets set RESEND_API_KEY=SEU_TOKEN_RESEND
+supabase secrets set EMAIL_FROM=notificacoes@seu-dominio.com
+supabase secrets set ONESIGNAL_REST_API_KEY=SUA_CHAVE_REST_ONESIGNAL
+supabase secrets set ONESIGNAL_APP_ID=SEU_APP_ID_ONESIGNAL
+```
+
+#### Como obter cada secret
+
+- `SUPABASE_URL`:
+  - Supabase → **Settings → API**
+- `SUPABASE_SERVICE_ROLE_KEY`:
+  - Supabase → **Settings → API** (chave **service_role**, manter em segredo)
+- `RESEND_API_KEY`:
+  - Dashboard da Resend → API Keys
+- `EMAIL_FROM`:
+  - Remetente validado na Resend (domínio/email verificado)
+- `ONESIGNAL_REST_API_KEY`:
+  - OneSignal → Settings → Keys & IDs
+- `ONESIGNAL_APP_ID`:
+  - OneSignal → App Settings
+
+> Nunca coloque esses valores no frontend (`script.js`, HTML etc).
+
+---
+
+### Passo 6) Deploy da Edge Function
+
+A função está neste caminho:
+
+- `supabase/functions/notificacoes-dispatch/index.ts`
+
+Faça deploy:
+
+```bash
+supabase functions deploy notificacoes-dispatch
+```
+
+Opcional (teste local):
+
+```bash
+supabase functions serve notificacoes-dispatch --env-file .env.local
+```
+
+---
+
+### Passo 7) Configurar OneSignal Web Push + Service Workers
+
+Para GitHub Pages, confirme que os workers estão publicados na raiz do site:
+
+- `/OneSignalSDKWorker.js`
+- `/OneSignalSDKUpdaterWorker.js`
+
+Checklist:
+
+1. Os arquivos existem no repositório.
+2. Eles estão sendo enviados no deploy.
+3. A URL final responde `200` (não 404).
+
+Exemplo de teste rápido no navegador:
+- `https://SEU_USUARIO.github.io/SEU_REPO/OneSignalSDKWorker.js`
+
+> Se retornar 404, push em segundo plano não funcionará.
+
+---
+
+### Passo 8) Validação ponta a ponta (checklist final)
+
+Depois de tudo configurado, valide assim:
+
+1. Faça login com dois usuários diferentes (A e B).
+2. Com usuário A, crie um recadinho.
+3. Verifique:
+   - inserção na tabela `notificacoes`
+   - usuário B recebeu aviso em tempo real no site
+   - email foi enviado para B (via Resend)
+   - push foi disparado (OneSignal)
+4. Repita para:
+   - upload de imagem
+   - criação de surpresa
+   - criação de data na agenda
+
+Se algum item falhar:
+- cheque logs da Edge Function no Supabase
+- confira secrets
+- confira Realtime da tabela
+- confira workers do OneSignal (404)
+
+---
+
+### Fluxo esperado de funcionamento
+
+```text
+evento do usuário (recado/imagem/surpresa/agenda)
+↓
+frontend grava em public.notificacoes
+↓
+realtime atualiza interface
+↓
+frontend chama /functions/v1/notificacoes-dispatch
+↓
+edge function envia email + push (exceto autor)
+```
+
+---
+
+### Observações importantes
+
+- Sem `SUPABASE_SERVICE_ROLE_KEY`, a função não conseguirá consultar destinatários com segurança.
+- Sem `RESEND_API_KEY`, o sistema continua funcionando, mas sem email.
+- Sem `ONESIGNAL_REST_API_KEY`, o sistema continua funcionando, mas sem push.
+- Sem Realtime da tabela `notificacoes`, a notificação só chega por canais externos (email/push), não instantaneamente na UI.
+
 ---
 
 ## 📡 Exemplos de Chamadas REST
@@ -243,7 +447,7 @@ const insertRecadinho = async (autor, mensagem) => {
       body: JSON.stringify({
         autor: autor,
         mensagem: mensagem,
-        aprovado: false
+        aprovado: true
       })
     }
   );

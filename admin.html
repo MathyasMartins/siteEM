@@ -10,6 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <header>
@@ -34,6 +35,23 @@
           <a href="index.html" class="btn btn-outline">Voltar ao site</a>
           <button id="logoutBtn" class="btn btn-outline">Sair</button>
         </div>
+      </div>
+
+
+      <div class="admin-section">
+        <h3>👤 Meu Perfil</h3>
+        <form id="profileForm">
+          <div class="form-group">
+            <label for="profileNomeInput">Nome</label>
+            <input type="text" id="profileNomeInput" placeholder="Seu nome" required>
+          </div>
+          <div class="form-group">
+            <label for="profileApelidoInput">Apelido</label>
+            <input type="text" id="profileApelidoInput" placeholder="Como quer aparecer no sistema" required>
+            <small style="color: var(--text-secondary);">Este apelido será usado na autoria dos recadinhos e notificações.</small>
+          </div>
+          <button type="submit" class="btn btn-primary">Salvar Perfil</button>
+        </form>
       </div>
 
       <div class="admin-section">
@@ -86,9 +104,7 @@
           </div>
           <button type="submit" class="btn btn-primary">Adicionar Recadinho</button>
         </form>
-        <h4 style="margin-top: var(--spacing-lg); margin-bottom: var(--spacing-md);">Recadinhos Pendentes de Aprovação</h4>
-        <div class="admin-list" id="pendingRecadinhosList"></div>
-        <h4 style="margin-top: var(--spacing-lg); margin-bottom: var(--spacing-md);">Todos os Recadinhos</h4>
+        <h4 style="margin-top: var(--spacing-lg); margin-bottom: var(--spacing-md);">Recadinhos</h4>
         <div class="admin-list" id="allRecadinhosList"></div>
       </div>
 

@@ -14,9 +14,9 @@ async function loadSurpriseMessage() {
   const params = new URLSearchParams(window.location.search);
   const surpresaId = Number(params.get('surpresa'));
 
-  const surpresas = await supabase.getSurpresas();
-  const agenda = await supabase.getAgenda();
-  const fotos = await supabase.getFotos();
+  const surpresas = await supabaseApi.getSurpresas();
+  const agenda = await supabaseApi.getAgenda();
+  const fotos = await supabaseApi.getFotos();
 
   const today = DateUtils.toISODate(new Date());
   const surpresaSelecionada = surpresaId
