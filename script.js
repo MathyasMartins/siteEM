@@ -110,7 +110,10 @@ class SupabaseAPI {
         `${this.url}/rest/v1/recadinhos`,
         {
           method: 'POST',
-          headers: this.getHeaders(),
+          headers: {
+            ...this.getHeaders(),
+            'Prefer': 'return=representation'
+          },
           body: JSON.stringify({
             autor: autor,
             mensagem: mensagem,
@@ -122,11 +125,13 @@ class SupabaseAPI {
       if (!response.ok) {
         throw new Error(`Erro ao inserir recadinho: ${response.status}`);
       }
-      return true;
+
+      const data = await response.json();
+      return data[0] || null;
 
     } catch (error) {
       console.error('Erro ao inserir recadinho:', error);
-      return false;
+      return null;
     }
   }
 
@@ -198,7 +203,10 @@ class SupabaseAPI {
         `${this.url}/rest/v1/fotos`,
         {
           method: 'POST',
-          headers: this.getHeaders(),
+          headers: {
+            ...this.getHeaders(),
+            'Prefer': 'return=representation'
+          },
           body: JSON.stringify(payload)
         }
       );
@@ -213,7 +221,10 @@ class SupabaseAPI {
             `${this.url}/rest/v1/fotos`,
             {
               method: 'POST',
-              headers: this.getHeaders(),
+              headers: {
+                ...this.getHeaders(),
+                'Prefer': 'return=representation'
+              },
               body: JSON.stringify({ url: url })
             }
           );
@@ -224,12 +235,12 @@ class SupabaseAPI {
         throw new Error(`Erro ao inserir foto: ${response.status}`);
       }
 
-      // 🔥 Não usa response.json()
-      return true;
+      const data = await response.json();
+      return data[0] || null;
 
     } catch (error) {
       console.error('Erro ao inserir foto:', error);
-      return false;
+      return null;
     }
   }
 
@@ -378,6 +389,47 @@ class SupabaseAPI {
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
       return false;
+    }
+  }
+
+  async getUsuariosEmails() {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios?select=email`,
+        { headers: this.getHeaders() }
+      );
+      if (!response.ok) throw new Error(`Erro ao buscar emails dos usuários: ${response.status}`);
+      const data = await response.json();
+      return data.map((item) => item.email).filter(Boolean);
+    } catch (error) {
+      console.error('Erro ao buscar emails dos usuários:', error);
+      return [];
+    }
+  }
+
+  async createNotification(payload) {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/notificacoes`,
+        {
+          method: 'POST',
+          headers: {
+            ...this.getHeaders(),
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erro ao criar notificação: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data[0] || null;
+    } catch (error) {
+      console.error('Erro ao criar notificação:', error);
+      return null;
     }
   }
 
@@ -694,15 +746,25 @@ class OneSignalManager {
     this.lastNotified = new Set();
   }
 
+  getBasePath() {
+    const isGithubPages = window.location.hostname.endsWith('github.io');
+    const projectPath = window.location.pathname.split('/').filter(Boolean)[0] || '';
+    return isGithubPages && projectPath ? `/${projectPath}` : '';
+  }
+
   async init() {
     if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
 
-    const isGithubPages = window.location.hostname.endsWith('github.io');
-    const projectPath = window.location.pathname.split('/').filter(Boolean)[0] || '';
-    const basePath = isGithubPages && projectPath ? `/${projectPath}` : '';
+    const basePath = this.getBasePath();
     const workerPath = `${basePath}/OneSignalSDKWorker.js`;
     const updaterWorkerPath = `${basePath}/OneSignalSDKUpdaterWorker.js`;
     const workerScope = `${basePath}/`;
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(workerPath, { scope: workerScope })
+        .then(() => console.log('OneSignal Worker registrado em:', workerPath))
+        .catch((error) => console.error('Erro ao registrar OneSignal Worker:', error));
+    }
 
     window.OneSignalDeferred.push(async (OneSignal) => {
       await OneSignal.init({
@@ -711,7 +773,8 @@ class OneSignalManager {
         serviceWorkerUpdaterPath: updaterWorkerPath,
         path: workerScope,
         serviceWorkerParam: { scope: workerScope },
-        notifyButton: { enable: true }
+        notifyButton: { enable: true },
+        allowLocalhostAsSecureOrigin: true
       });
       this.ready = true;
       const user = authManager.getUser();
@@ -728,6 +791,95 @@ class OneSignalManager {
       new Notification(title, { body: message });
     }
     showNotification(`${title} — ${message}`, 'info');
+  }
+}
+
+class NotificationManager {
+  constructor() {
+    this.channel = null;
+    this.realtimeClient = null;
+  }
+
+  async getRecipientEmails(authorEmail) {
+    const emails = await supabase.getUsuariosEmails();
+    const unique = [...new Set(emails)];
+    return unique.filter((email) => email && email !== authorEmail);
+  }
+
+  async createNotification({ tipo, mensagem, autorEmail, referenciaId = null }) {
+    const recipients = await this.getRecipientEmails(autorEmail);
+
+    if (recipients.length === 0) {
+      const notification = await supabase.createNotification({
+        tipo,
+        mensagem,
+        autor_email: autorEmail,
+        destino_email: null,
+        referencia_id: referenciaId ? String(referenciaId) : null,
+        lida: false
+      });
+
+      if (notification) {
+        this.triggerDelivery(notification).catch(() => null);
+      }
+      return [notification].filter(Boolean);
+    }
+
+    const inserted = [];
+    for (const destinoEmail of recipients) {
+      const notification = await supabase.createNotification({
+        tipo,
+        mensagem,
+        autor_email: autorEmail,
+        destino_email: destinoEmail,
+        referencia_id: referenciaId ? String(referenciaId) : null,
+        lida: false
+      });
+
+      if (notification) {
+        inserted.push(notification);
+        this.triggerDelivery(notification).catch(() => null);
+      }
+    }
+
+    return inserted;
+  }
+
+  async triggerDelivery(notification) {
+    const token = authManager.getAccessToken();
+    await fetch(`${SUPABASE_URL}/functions/v1/notificacoes-dispatch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ notificacao: notification })
+    });
+  }
+
+  initRealtime() {
+    if (!window.supabase?.createClient || this.channel) return;
+
+    this.realtimeClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const currentUserEmail = authManager.getUser()?.email;
+
+    this.channel = this.realtimeClient
+      .channel('notificacoes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notificacoes' },
+        (payload) => {
+          const data = payload.new;
+          const isOwn = data.autor_email && data.autor_email === currentUserEmail;
+          const isTarget = !data.destino_email || data.destino_email === currentUserEmail;
+
+          if (!isOwn && isTarget) {
+            showNotification(data.mensagem, 'info');
+          }
+        }
+      )
+      .subscribe();
   }
 }
 
@@ -821,6 +973,7 @@ const cloudinary = new CloudinaryAPI(CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PR
 const themeManager = new ThemeManager();
 const authManager = new AuthManager(SUPABASE_URL, SUPABASE_ANON_KEY);
 const oneSignalManager = new OneSignalManager();
+const notificationManager = new NotificationManager();
 
 // ============================================================================
 // SERVICE WORKER REGISTRATION (PWA)
@@ -828,7 +981,8 @@ const oneSignalManager = new OneSignalManager();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
+    const basePath = oneSignalManager.getBasePath();
+    navigator.serviceWorker.register(`${basePath}/sw.js`)
       .then(registration => console.log('Service Worker registrado:', registration))
       .catch(error => console.log('Erro ao registrar Service Worker:', error));
   });
@@ -839,6 +993,7 @@ if ('Notification' in window && Notification.permission === 'default') {
 }
 
 oneSignalManager.init();
+notificationManager.initRealtime();
 
 function ensureAuthenticated() {
   const onLoginPage = window.location.pathname.endsWith('login.html');

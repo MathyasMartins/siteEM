@@ -211,16 +211,23 @@ function setupRecadinhoForm() {
     submitBtn.textContent = 'Enviando...';
 
     const author = authManager.getDisplayName();
-    const result = await supabase.insertRecadinho(author, message);
+    const recadinho = await supabase.insertRecadinho(author, message);
 
     submitBtn.disabled = false;
     submitBtn.textContent = 'Enviar Recadinho ❤️';
 
-    if (result) {
-      oneSignalManager.notifyOnce(`new-recadinho-${Date.now()}`, 'Recadinho enviado', `${author} enviou um recadinho.`);
+    if (recadinho) {
+      await notificationManager.createNotification({
+        tipo: 'recado',
+        mensagem: `${author} enviou um novo recadinho.`,
+        autorEmail: authManager.getUser()?.email || null,
+        referenciaId: recadinho.id
+      });
+
       showNotification('Recadinho enviado com sucesso!', 'success');
       textarea.value = '';
       charCount.textContent = '0/200';
+      await loadRecadinhos();
     } else {
       showNotification('Erro ao enviar recadinho', 'error');
     }
@@ -238,9 +245,22 @@ async function checkMeetingNotification() {
 async function checkTodayAgendaNotifications() {
   const agenda = await supabase.getAgenda();
   const hoje = DateUtils.toISODate(new Date());
-  agenda
-    .filter((item) => item.data?.startsWith(hoje))
-    .forEach((item) => oneSignalManager.notifyOnce(`agenda-${item.id}-${hoje}`, 'Data especial chegou 🎉', item.titulo));
+
+  for (const item of agenda.filter((entry) => entry.data?.startsWith(hoje))) {
+    const localKey = `agenda-arrival-${item.id}-${hoje}`;
+
+    if (!localStorage.getItem(localKey)) {
+      await notificationManager.createNotification({
+        tipo: 'agenda',
+        mensagem: `Hoje é o dia de "${item.titulo}" 🎉`,
+        autorEmail: null,
+        referenciaId: item.id
+      });
+      localStorage.setItem(localKey, '1');
+    }
+
+    oneSignalManager.notifyOnce(`agenda-${item.id}-${hoje}`, 'Data especial chegou 🎉', item.titulo);
+  }
 }
 
 async function renderSurpriseFloatingButton() {

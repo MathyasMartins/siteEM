@@ -112,19 +112,35 @@ async function loadPhotosSection() {
         return;
       }
 
+      if (!file.type.startsWith('image/')) {
+        showNotification('Arquivo inválido. Selecione uma imagem.', 'warning');
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        showNotification('A imagem deve ter no máximo 10MB.', 'warning');
+        return;
+      }
+
       const submitBtn = uploadForm.querySelector('button[type="submit"]');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Enviando...';
 
       try {
         const uploaded = await cloudinary.uploadImage(file);
-        if (!uploaded?.secureUrl) throw new Error('Erro no upload Cloudinary');
+        if (!uploaded?.secureUrl) throw new Error('Upload concluído sem URL válida.');
 
-        const result = await supabase.insertFoto(uploaded.secureUrl, uploaded.publicId);
-        if (!result) throw new Error('Erro ao salvar foto no Supabase');
+        const fotoInserida = await supabase.insertFoto(uploaded.secureUrl, uploaded.publicId);
+        if (!fotoInserida?.id) throw new Error('Upload feito, mas não foi possível salvar a imagem no Supabase.');
 
-        const user = authManager.getUser();
-        oneSignalManager.notifyOnce(`foto-${uploaded.publicId || Date.now()}`, 'Nova foto', `${user?.email || 'Usuário'} adicionou uma nova foto.`);
+        const autorEmail = authManager.getUser()?.email || null;
+        await notificationManager.createNotification({
+          tipo: 'imagem',
+          mensagem: `${authManager.getDisplayName()} adicionou uma nova imagem na galeria.`,
+          autorEmail,
+          referenciaId: fotoInserida.id
+        });
+
         showNotification('Foto enviada com sucesso!', 'success');
         fileInput.value = '';
         await loadPhotosSection();
@@ -194,13 +210,19 @@ async function loadRecadinhosSection() {
       submitBtn.textContent = 'Adicionando...';
 
       const autor = authManager.getDisplayName();
-      const result = await supabase.insertRecadinho(autor, message);
+      const recadinho = await supabase.insertRecadinho(autor, message);
 
       submitBtn.disabled = false;
       submitBtn.textContent = 'Adicionar Recadinho';
 
-      if (result) {
-        oneSignalManager.notifyOnce(`recadinho-${Date.now()}`, 'Novo recadinho', `${autor} enviou um recadinho.`);
+      if (recadinho) {
+        await notificationManager.createNotification({
+          tipo: 'recado',
+          mensagem: `${autor} enviou um novo recadinho.`,
+          autorEmail: authManager.getUser()?.email || null,
+          referenciaId: recadinho.id
+        });
+
         showNotification('Recadinho adicionado com sucesso!', 'success');
         document.getElementById('myRecadinhoInput').value = '';
         await loadRecadinhosSection();
@@ -271,7 +293,13 @@ async function loadAgendaSection() {
       submitBtn.textContent = 'Adicionar à Agenda';
 
       if (result) {
-        oneSignalManager.notifyOnce(`agenda-${result[0]?.id || Date.now()}`, 'Nova data especial', `"${titulo}" foi adicionada à agenda.`);
+        await notificationManager.createNotification({
+          tipo: 'agenda',
+          mensagem: `${authManager.getDisplayName()} adicionou a data especial "${titulo}".`,
+          autorEmail: authManager.getUser()?.email || null,
+          referenciaId: result[0]?.id || null
+        });
+
         showNotification('Data adicionada à agenda!', 'success');
         form.reset();
         await loadAgendaSection();
@@ -345,11 +373,24 @@ async function loadSurpresasSection() {
         return showNotification('Preencha título, data e mensagem.', 'warning');
       }
 
+      let referenciaId = id || null;
       const ok = id
         ? await supabase.updateSurpresa(id, payload)
         : !!(await supabase.insertSurpresa(payload));
 
       if (ok) {
+        if (!id) {
+          const surpresasAtualizadas = await supabase.getSurpresas();
+          referenciaId = surpresasAtualizadas[0]?.id || null;
+        }
+
+        await notificationManager.createNotification({
+          tipo: 'surpresa',
+          mensagem: `${authManager.getDisplayName()} enviou uma surpresa especial.`,
+          autorEmail: authManager.getUser()?.email || null,
+          referenciaId
+        });
+
         showNotification(id ? 'Surpresa atualizada!' : 'Surpresa criada!', 'success');
         form.reset();
         document.getElementById('surpresaIdInput').value = '';

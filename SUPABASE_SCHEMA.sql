@@ -94,6 +94,22 @@ CREATE TABLE IF NOT EXISTS usuarios (
   nome VARCHAR(255)
 );
 
+
+-- ============================================================================
+-- 7. TABELA: notificacoes
+-- Centro de notificações (recado, imagem, surpresa, agenda)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS notificacoes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tipo TEXT NOT NULL,
+  mensagem TEXT NOT NULL,
+  autor_email TEXT,
+  destino_email TEXT,
+  referencia_id TEXT,
+  lida BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- ============================================================================
 -- ATIVAR ROW LEVEL SECURITY (RLS)
 -- ============================================================================
@@ -103,6 +119,7 @@ ALTER TABLE fotos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agenda ENABLE ROW LEVEL SECURITY;
 ALTER TABLE surpresas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notificacoes ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
 -- POLÍTICAS DE RLS - LEITURA PÚBLICA
@@ -139,6 +156,12 @@ CREATE POLICY "usuarios_read_auth" ON usuarios
   TO authenticated
   USING (true);
 
+-- Política de leitura de notificações para usuários autenticados
+CREATE POLICY "notificacoes_read_auth" ON notificacoes
+  FOR SELECT
+  TO authenticated
+  USING (destino_email IS NULL OR destino_email = (auth.jwt() ->> 'email'));
+
 -- ============================================================================
 -- POLÍTICAS DE RLS - ESCRITA PÚBLICA (para simplicidade)
 -- ============================================================================
@@ -171,6 +194,12 @@ CREATE POLICY "usuarios_insert_auth" ON usuarios
   TO authenticated
   WITH CHECK (true);
 
+-- Política de inserção de notificações para usuários autenticados
+CREATE POLICY "notificacoes_insert_auth" ON notificacoes
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (autor_email = (auth.jwt() ->> 'email') OR autor_email IS NULL);
+
 -- Política de atualização para usuários autenticados na config
 CREATE POLICY "config_update_auth" ON config
   FOR UPDATE
@@ -198,6 +227,13 @@ CREATE POLICY "usuarios_update_auth" ON usuarios
   TO authenticated
   USING (true)
   WITH CHECK (true);
+
+-- Política de atualização de notificações (marcar como lida)
+CREATE POLICY "notificacoes_update_auth" ON notificacoes
+  FOR UPDATE
+  TO authenticated
+  USING (destino_email IS NULL OR destino_email = (auth.jwt() ->> 'email'))
+  WITH CHECK (destino_email IS NULL OR destino_email = (auth.jwt() ->> 'email'));
 
 -- Política de deleção para usuários autenticados em fotos
 CREATE POLICY "fotos_delete_auth" ON fotos
@@ -242,6 +278,8 @@ CREATE INDEX IF NOT EXISTS idx_fotos_criado_em ON fotos(criado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_agenda_data ON agenda(data);
 CREATE INDEX IF NOT EXISTS idx_surpresas_data ON surpresas(data);
 CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
+CREATE INDEX IF NOT EXISTS idx_notificacoes_destino_created ON notificacoes(destino_email, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notificacoes_tipo ON notificacoes(tipo);
 
 -- ============================================================================
 -- FIM DO SCHEMA
