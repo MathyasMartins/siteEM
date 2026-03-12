@@ -14,6 +14,7 @@ let currentLightboxIndex = 0;
 document.addEventListener('DOMContentLoaded', async () => {
   // Aplicar tema
   updateThemeToggle();
+  if (!ensureAuthenticated()) return;
   
   // Carregar fotos
   await loadFotos();

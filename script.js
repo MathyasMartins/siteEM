@@ -13,6 +13,7 @@ const SUPABASE_URL = 'https://rnwbazmklptnvjknlwsu.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJud2Jhem1rbHB0bnZqa25sd3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzNTk2MzIsImV4cCI6MjA4MzkzNTYzMn0.I6KFmWtLmLkYvVqbaQt6BFSnx0BQt92Asjm_A5LGScI';
 const CLOUDINARY_CLOUD_NAME = 'ddbtzkw3a';
 const CLOUDINARY_UPLOAD_PRESET = 'site-romantico-unsigned';
+const ONE_SIGNAL_APP_ID = '2b57737b-ddcc-4a31-867e-ea7aaa92dc03';
 
 // ============================================================================
 // CLASSE: SupabaseAPI
@@ -27,9 +28,10 @@ class SupabaseAPI {
 
   // Headers padrão para requisições
   getHeaders() {
+    const token = authManager?.getAccessToken?.();
     return {
       'apikey': this.key,
-      'Authorization': `Bearer ${this.key}`,
+      'Authorization': `Bearer ${token || this.key}`,
       'Content-Type': 'application/json'
     };
   }
@@ -185,14 +187,14 @@ class SupabaseAPI {
   }
 
   // Inserir foto
-  async insertFoto(url) {
+  async insertFoto(url, publicId = null) {
     try {
       const response = await fetch(
         `${this.url}/rest/v1/fotos`,
         {
           method: 'POST',
           headers: this.getHeaders(),
-          body: JSON.stringify({ url: url })
+          body: JSON.stringify({ url: url, public_id: publicId })
         }
       );
 
@@ -224,6 +226,21 @@ class SupabaseAPI {
     } catch (error) {
       console.error('Erro ao deletar foto:', error);
       return false;
+    }
+  }
+
+  async getFotoById(id) {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/fotos?id=eq.${id}&select=*`,
+        { headers: this.getHeaders() }
+      );
+      if (!response.ok) throw new Error(`Erro ao buscar foto: ${response.status}`);
+      const data = await response.json();
+      return data[0] || null;
+    } catch (error) {
+      console.error('Erro ao buscar foto por id:', error);
+      return null;
     }
   }
 
@@ -297,12 +314,14 @@ class SupabaseAPI {
       const recadinhos = await this.getRecadinhos(false);
       const fotos = await this.getFotos();
       const agenda = await this.getAgenda();
+      const surpresas = await this.getSurpresas();
 
       return {
         config,
         recadinhos,
         fotos,
         agenda,
+        surpresas,
         exportedAt: new Date().toISOString()
       };
     } catch (error) {
@@ -340,9 +359,81 @@ class SupabaseAPI {
         }
       }
 
+      if (dados.surpresas && Array.isArray(dados.surpresas)) {
+        for (const surpresa of dados.surpresas) {
+          await this.insertSurpresa({
+            titulo: surpresa.titulo,
+            data: surpresa.data,
+            mensagem: surpresa.mensagem,
+            foto_id: surpresa.foto_id || null,
+            created_by: surpresa.created_by || null,
+            created_by_email: surpresa.created_by_email || null
+          });
+        }
+      }
+
       return true;
     } catch (error) {
       console.error('Erro ao importar dados:', error);
+      return false;
+    }
+  }
+
+  async getSurpresas() {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/surpresas?order=data.asc`,
+        { headers: this.getHeaders() }
+      );
+      if (!response.ok) throw new Error(`Erro ao buscar surpresas: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Erro ao buscar surpresas:', error);
+      return [];
+    }
+  }
+
+  async insertSurpresa(payload) {
+    try {
+      const response = await fetch(`${this.url}/rest/v1/surpresas`, {
+        method: 'POST',
+        headers: { ...this.getHeaders(), 'Prefer': 'return=representation' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(`Erro ao inserir surpresa: ${response.status}`);
+      const data = await response.json();
+      return data[0] || null;
+    } catch (error) {
+      console.error('Erro ao inserir surpresa:', error);
+      return null;
+    }
+  }
+
+  async updateSurpresa(id, payload) {
+    try {
+      const response = await fetch(`${this.url}/rest/v1/surpresas?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(`Erro ao atualizar surpresa: ${response.status}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar surpresa:', error);
+      return false;
+    }
+  }
+
+  async deleteSurpresa(id) {
+    try {
+      const response = await fetch(`${this.url}/rest/v1/surpresas?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders()
+      });
+      if (!response.ok) throw new Error(`Erro ao deletar surpresa: ${response.status}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao deletar surpresa:', error);
       return false;
     }
   }
@@ -375,11 +466,130 @@ class CloudinaryAPI {
       if (!response.ok) throw new Error(`Erro ao fazer upload: ${response.status}`);
 
       const data = await response.json();
-      return data.secure_url; // Retorna a URL segura da imagem
+      return {
+        secureUrl: data.secure_url,
+        publicId: data.public_id || null
+      };
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
       return null;
     }
+  }
+
+  async deleteImage(publicId) {
+    try {
+      const response = await fetch('/api/cloudinary/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publicId })
+      });
+      if (!response.ok) throw new Error(`Erro ao deletar no Cloudinary: ${response.status}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao deletar no Cloudinary:', error);
+      return false;
+    }
+  }
+}
+
+class AuthManager {
+  constructor(url, key) {
+    this.url = url;
+    this.key = key;
+    this.sessionKey = 'supabase_auth_session';
+    this.userKey = 'supabase_auth_user';
+  }
+
+  getStoredSession() {
+    const raw = sessionStorage.getItem(this.sessionKey);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  getUser() {
+    const raw = sessionStorage.getItem(this.userKey);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  getAccessToken() {
+    return this.getStoredSession()?.access_token || null;
+  }
+
+  saveSession(data) {
+    if (!data?.access_token) return;
+    sessionStorage.setItem(this.sessionKey, JSON.stringify(data));
+    if (data.user) {
+      sessionStorage.setItem(this.userKey, JSON.stringify(data.user));
+    }
+  }
+
+  async login(email, password) {
+    const response = await fetch(`${this.url}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        apikey: this.key,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    this.saveSession(data);
+    return data;
+  }
+
+  async signUp(email, password) {
+    const response = await fetch(`${this.url}/auth/v1/signup`, {
+      method: 'POST',
+      headers: {
+        apikey: this.key,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  }
+
+  logout() {
+    sessionStorage.removeItem(this.sessionKey);
+    sessionStorage.removeItem(this.userKey);
+  }
+
+  isAuthenticated() {
+    return !!this.getAccessToken();
+  }
+}
+
+class OneSignalManager {
+  constructor() {
+    this.ready = false;
+    this.lastNotified = new Set();
+  }
+
+  async init() {
+    if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
+    window.OneSignalDeferred.push(async (OneSignal) => {
+      await OneSignal.init({
+        appId: ONE_SIGNAL_APP_ID,
+        serviceWorkerPath: 'OneSignalSDKWorker.js',
+        serviceWorkerUpdaterPath: 'OneSignalSDKUpdaterWorker.js',
+        notifyButton: { enable: true }
+      });
+      this.ready = true;
+      const user = authManager.getUser();
+      if (user?.id) {
+        await OneSignal.login(user.id);
+      }
+    });
+  }
+
+  notifyOnce(key, title, message) {
+    if (this.lastNotified.has(key)) return;
+    this.lastNotified.add(key);
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body: message });
+    }
+    showNotification(`${title} — ${message}`, 'info');
   }
 }
 
@@ -461,64 +671,8 @@ class ThemeManager {
 }
 
 // ============================================================================
-// GERENCIADOR DE AUTENTICAÇÃO (ADMIN)
+// AUTENTICAÇÃO (SUPABASE AUTH)
 // ============================================================================
-
-class AdminAuth {
-  constructor() {
-    this.storageKey = 'admin_password_hash';
-  }
-
-  // Hash simples de senha (não é seguro para produção, apenas para demo)
-  hashPassword(password) {
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-      const char = password.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Converter para inteiro de 32 bits
-    }
-    return hash.toString();
-  }
-
-  // Definir senha
-  setPassword(password) {
-    const hash = this.hashPassword(password);
-    localStorage.setItem(this.storageKey, hash);
-    localStorage.setItem('admin_logged_in', 'false');
-  }
-
-  // Verificar senha
-  verifyPassword(password) {
-    const hash = this.hashPassword(password);
-    const storedHash = localStorage.getItem(this.storageKey);
-    return hash === storedHash;
-  }
-
-  // Login
-  login(password) {
-    if (this.verifyPassword(password)) {
-      localStorage.setItem('admin_logged_in', 'true');
-      localStorage.setItem('admin_login_time', Date.now().toString());
-      return true;
-    }
-    return false;
-  }
-
-  // Logout
-  logout() {
-    localStorage.setItem('admin_logged_in', 'false');
-  }
-
-  // Verificar se está logado
-  isLoggedIn() {
-    return localStorage.getItem('admin_logged_in') === 'true';
-  }
-
-  // Verificar se senha foi definida
-  isPasswordSet() {
-    return localStorage.getItem(this.storageKey) !== null;
-  }
-}
 
 // ============================================================================
 // INICIALIZAR INSTÂNCIAS GLOBAIS
@@ -527,7 +681,8 @@ class AdminAuth {
 const supabase = new SupabaseAPI(SUPABASE_URL, SUPABASE_ANON_KEY);
 const cloudinary = new CloudinaryAPI(CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET);
 const themeManager = new ThemeManager();
-const adminAuth = new AdminAuth();
+const authManager = new AuthManager(SUPABASE_URL, SUPABASE_ANON_KEY);
+const oneSignalManager = new OneSignalManager();
 
 // ============================================================================
 // SERVICE WORKER REGISTRATION (PWA)
@@ -539,6 +694,25 @@ if ('serviceWorker' in navigator) {
       .then(registration => console.log('Service Worker registrado:', registration))
       .catch(error => console.log('Erro ao registrar Service Worker:', error));
   });
+}
+
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission().catch(() => null);
+}
+
+oneSignalManager.init();
+
+function ensureAuthenticated() {
+  const onLoginPage = window.location.pathname.endsWith('login.html');
+  if (!authManager.isAuthenticated() && !onLoginPage) {
+    window.location.href = 'login.html';
+    return false;
+  }
+  if (authManager.isAuthenticated() && onLoginPage) {
+    window.location.href = 'index.html';
+    return false;
+  }
+  return true;
 }
 
 // ============================================================================
