@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateThemeToggle();
   if (!ensureAuthenticated()) return;
 
+  await authManager.ensureProfile();
   await loadConfig();
   await loadFotos();
   await loadRecadinhos();
@@ -209,7 +210,7 @@ function setupRecadinhoForm() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Enviando...';
 
-    const author = authManager.getUser()?.email || 'Usuário';
+    const author = authManager.getDisplayName();
     const result = await supabase.insertRecadinho(author, message);
 
     submitBtn.disabled = false;
@@ -217,7 +218,7 @@ function setupRecadinhoForm() {
 
     if (result) {
       oneSignalManager.notifyOnce(`new-recadinho-${Date.now()}`, 'Recadinho enviado', `${author} enviou um recadinho.`);
-      showNotification('Recadinho enviado com sucesso! Aguardando aprovação.', 'success');
+      showNotification('Recadinho enviado com sucesso!', 'success');
       textarea.value = '';
       charCount.textContent = '0/200';
     } else {

@@ -114,7 +114,7 @@ class SupabaseAPI {
           body: JSON.stringify({
             autor: autor,
             mensagem: mensagem,
-            aprovado: false
+            aprovado: true
           })
         }
       );
@@ -329,6 +329,58 @@ class SupabaseAPI {
     }
   }
 
+  async getUsuarioByEmail(email) {
+    if (!email) return null;
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&order=created_at.asc&limit=1`,
+        { headers: this.getHeaders() }
+      );
+      if (!response.ok) throw new Error(`Erro ao buscar perfil: ${response.status}`);
+      const data = await response.json();
+      return data[0] || null;
+    } catch (error) {
+      console.error('Erro ao buscar perfil por email:', error);
+      return null;
+    }
+  }
+
+  async insertUsuario(payload) {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(payload)
+        }
+      );
+      if (!response.ok) throw new Error(`Erro ao inserir perfil: ${response.status}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao inserir perfil:', error);
+      return false;
+    }
+  }
+
+  async updateUsuarioByEmail(email, updates) {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`,
+        {
+          method: 'PATCH',
+          headers: this.getHeaders(),
+          body: JSON.stringify(updates)
+        }
+      );
+      if (!response.ok) throw new Error(`Erro ao atualizar perfil: ${response.status}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      return false;
+    }
+  }
+
   // Exportar todos os dados como JSON
   async exportarDados() {
     try {
@@ -520,6 +572,7 @@ class AuthManager {
     this.key = key;
     this.sessionKey = 'supabase_auth_session';
     this.userKey = 'supabase_auth_user';
+    this.profileKey = 'supabase_user_profile';
   }
 
   getStoredSession() {
@@ -530,6 +583,17 @@ class AuthManager {
   getUser() {
     const raw = sessionStorage.getItem(this.userKey);
     return raw ? JSON.parse(raw) : null;
+  }
+
+  getProfile() {
+    const raw = sessionStorage.getItem(this.profileKey);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  getDisplayName() {
+    const profile = this.getProfile();
+    const user = this.getUser();
+    return profile?.apelido || profile?.nome || user?.email || 'Usuário';
   }
 
   getAccessToken() {
@@ -544,6 +608,46 @@ class AuthManager {
     }
   }
 
+  saveProfile(profile) {
+    if (!profile) return;
+    sessionStorage.setItem(this.profileKey, JSON.stringify(profile));
+  }
+
+  async ensureProfile() {
+    const user = this.getUser();
+    const email = user?.email;
+    if (!email) return null;
+
+    let profile = await supabase.getUsuarioByEmail(email);
+
+    if (!profile) {
+      const defaultName = email.split('@')[0] || 'Usuário';
+      const inserted = await supabase.insertUsuario({
+        email,
+        nome: defaultName,
+        apelido: defaultName,
+        url_imagem: null
+      });
+      if (!inserted) return null;
+      profile = await supabase.getUsuarioByEmail(email);
+    }
+
+    if (profile) this.saveProfile(profile);
+    return profile;
+  }
+
+  async updateProfile(updates) {
+    const user = this.getUser();
+    const email = user?.email;
+    if (!email) return false;
+
+    const ok = await supabase.updateUsuarioByEmail(email, updates);
+    if (!ok) return false;
+
+    await this.ensureProfile();
+    return true;
+  }
+
   async login(email, password) {
     const response = await fetch(`${this.url}/auth/v1/token?grant_type=password`, {
       method: 'POST',
@@ -556,6 +660,7 @@ class AuthManager {
     if (!response.ok) return null;
     const data = await response.json();
     this.saveSession(data);
+    await this.ensureProfile();
     return data;
   }
 
@@ -575,6 +680,7 @@ class AuthManager {
   logout() {
     sessionStorage.removeItem(this.sessionKey);
     sessionStorage.removeItem(this.userKey);
+    sessionStorage.removeItem(this.profileKey);
   }
 
   isAuthenticated() {
@@ -744,6 +850,11 @@ function ensureAuthenticated() {
     window.location.href = 'index.html';
     return false;
   }
+
+  if (authManager.isAuthenticated()) {
+    authManager.ensureProfile().catch(() => null);
+  }
+
   return true;
 }
 
