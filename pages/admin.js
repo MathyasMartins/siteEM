@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateThemeToggle();
   if (!ensureAuthenticated()) return;
 
+  await authManager.ensureProfile();
   await setupAdminDashboard();
 
   document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
@@ -13,12 +14,51 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function setupAdminDashboard() {
+  await loadProfileForm();
   await loadConfigForm();
   await loadPhotosSection();
   await loadRecadinhosSection();
   await loadAgendaSection();
   await loadSurpresasSection();
   await setupBackupRestore();
+}
+
+
+async function loadProfileForm() {
+  const form = document.getElementById('profileForm');
+  if (!form) return;
+
+  const profile = authManager.getProfile() || await authManager.ensureProfile();
+  if (profile) {
+    document.getElementById('profileNomeInput').value = profile.nome || '';
+    document.getElementById('profileApelidoInput').value = profile.apelido || '';
+  }
+
+  if (form.dataset.listenerAdded === 'true') return;
+  form.dataset.listenerAdded = 'true';
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const nome = document.getElementById('profileNomeInput').value.trim();
+    const apelido = document.getElementById('profileApelidoInput').value.trim();
+
+    if (!nome || !apelido) {
+      showNotification('Preencha nome e apelido.', 'warning');
+      return;
+    }
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+
+    const ok = await authManager.updateProfile({ nome, apelido });
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Salvar Perfil';
+
+    showNotification(ok ? 'Perfil salvo com sucesso!' : 'Erro ao salvar perfil', ok ? 'success' : 'error');
+  });
 }
 
 async function loadConfigForm() {
@@ -83,8 +123,7 @@ async function loadPhotosSection() {
         const result = await supabase.insertFoto(uploaded.secureUrl, uploaded.publicId);
         if (!result) throw new Error('Erro ao salvar foto no Supabase');
 
-        const user = authManager.getUser();
-        oneSignalManager.notifyOnce(`foto-${url}`, 'Nova foto', `${user?.email || 'Usuário'} adicionou uma nova foto.`);
+        oneSignalManager.notifyOnce(`foto-${uploaded.publicId || Date.now()}`, 'Nova foto', `${authManager.getDisplayName()} adicionou uma nova foto.`);
         showNotification('Foto enviada com sucesso!', 'success');
         fileInput.value = '';
         await loadPhotosSection();
@@ -153,8 +192,7 @@ async function loadRecadinhosSection() {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Adicionando...';
 
-      const user = authManager.getUser();
-      const autor = user?.email || 'Usuário';
+      const autor = authManager.getDisplayName();
       const result = await supabase.insertRecadinho(autor, message);
 
       submitBtn.disabled = false;
@@ -172,30 +210,7 @@ async function loadRecadinhosSection() {
   }
 
   const recs = await supabase.getRecadinhos(false);
-  const pendingList = document.getElementById('pendingRecadinhosList');
   const allList = document.getElementById('allRecadinhosList');
-  const pending = recs.filter((r) => !r.aprovado);
-
-  if (pendingList) {
-    pendingList.innerHTML = pending.length ? '' : '<p style="color: var(--text-secondary);">Nenhum recadinho pendente.</p>';
-    pending.forEach((recadinho) => {
-      const item = document.createElement('div');
-      item.className = 'admin-item';
-      item.innerHTML = `
-        <div style="flex: 1;">
-          <p style="margin: 0; color: var(--text-primary);">${escapeHtml(recadinho.mensagem)}</p>
-          <p style="margin: var(--spacing-xs) 0 0 0; color: var(--text-secondary); font-size: var(--font-size-sm);">
-            ${recadinho.autor} • ${DateUtils.formatDate(recadinho.criado_em)}
-          </p>
-        </div>
-        <div class="admin-item-actions">
-          <button class="btn btn-small btn-primary" onclick="approveRecadinho(${recadinho.id})">Aprovar</button>
-          <button class="btn btn-small btn-outline" onclick="deleteRecadinho(${recadinho.id})">Deletar</button>
-        </div>
-      `;
-      pendingList.appendChild(item);
-    });
-  }
 
   if (allList) {
     allList.innerHTML = recs.length ? '' : '<p style="color: var(--text-secondary);">Nenhum recadinho.</p>';
@@ -206,11 +221,10 @@ async function loadRecadinhosSection() {
         <div style="flex: 1;">
           <p style="margin: 0; color: var(--text-primary);">${escapeHtml(recadinho.mensagem)}</p>
           <p style="margin: var(--spacing-xs) 0 0 0; color: var(--text-secondary); font-size: var(--font-size-sm);">
-            ${recadinho.autor} • ${DateUtils.formatDate(recadinho.criado_em)} ${recadinho.aprovado ? '✓ Aprovado' : '⏳ Pendente'}
+            ${recadinho.autor} • ${DateUtils.formatDate(recadinho.criado_em)}
           </p>
         </div>
         <div class="admin-item-actions">
-          ${!recadinho.aprovado ? `<button class="btn btn-small btn-primary" onclick="approveRecadinho(${recadinho.id})">Aprovar</button>` : ''}
           <button class="btn btn-small btn-outline" onclick="deleteRecadinho(${recadinho.id})">Deletar</button>
         </div>
       `;
@@ -219,11 +233,6 @@ async function loadRecadinhosSection() {
   }
 }
 
-async function approveRecadinho(id) {
-  const result = await supabase.updateRecadinho(id, { aprovado: true });
-  showNotification(result ? 'Recadinho aprovado!' : 'Erro ao aprovar recadinho', result ? 'success' : 'error');
-  if (result) await loadRecadinhosSection();
-}
 
 async function deleteRecadinho(id) {
   if (!confirm('Tem certeza que deseja deletar este recadinho?')) return;
@@ -328,7 +337,7 @@ async function loadSurpresasSection() {
         mensagem: document.getElementById('surpresaMensagemInput').value.trim(),
         foto_id: document.getElementById('surpresaFotoSelect').value || null,
         created_by: authManager.getUser()?.id || null,
-        created_by_email: authManager.getUser()?.email || null
+        created_by_email: authManager.getDisplayName()
       };
 
       if (!payload.titulo || !payload.data || !payload.mensagem) {

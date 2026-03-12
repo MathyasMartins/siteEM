@@ -114,7 +114,7 @@ class SupabaseAPI {
           body: JSON.stringify({
             autor: autor,
             mensagem: mensagem,
-            aprovado: false
+            aprovado: true
           })
         }
       );
@@ -189,14 +189,36 @@ class SupabaseAPI {
   // Inserir foto
   async insertFoto(url, publicId = null) {
     try {
-      const response = await fetch(
+      const payload = { url: url };
+      if (publicId) {
+        payload.public_id = publicId;
+      }
+
+      let response = await fetch(
         `${this.url}/rest/v1/fotos`,
         {
           method: 'POST',
           headers: this.getHeaders(),
-          body: JSON.stringify({ url: url, public_id: publicId })
+          body: JSON.stringify(payload)
         }
       );
+
+      // Compatibilidade com schemas antigos sem a coluna `public_id`
+      if (!response.ok && publicId) {
+        const responseText = await response.text();
+        const missingPublicIdColumn = responseText.includes('public_id') && responseText.includes('column');
+
+        if (response.status === 400 && missingPublicIdColumn) {
+          response = await fetch(
+            `${this.url}/rest/v1/fotos`,
+            {
+              method: 'POST',
+              headers: this.getHeaders(),
+              body: JSON.stringify({ url: url })
+            }
+          );
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`Erro ao inserir foto: ${response.status}`);
@@ -303,6 +325,58 @@ class SupabaseAPI {
       return true;
     } catch (error) {
       console.error('Erro ao deletar agenda:', error);
+      return false;
+    }
+  }
+
+  async getUsuarioByEmail(email) {
+    if (!email) return null;
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&order=created_at.asc&limit=1`,
+        { headers: this.getHeaders() }
+      );
+      if (!response.ok) throw new Error(`Erro ao buscar perfil: ${response.status}`);
+      const data = await response.json();
+      return data[0] || null;
+    } catch (error) {
+      console.error('Erro ao buscar perfil por email:', error);
+      return null;
+    }
+  }
+
+  async insertUsuario(payload) {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(payload)
+        }
+      );
+      if (!response.ok) throw new Error(`Erro ao inserir perfil: ${response.status}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao inserir perfil:', error);
+      return false;
+    }
+  }
+
+  async updateUsuarioByEmail(email, updates) {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`,
+        {
+          method: 'PATCH',
+          headers: this.getHeaders(),
+          body: JSON.stringify(updates)
+        }
+      );
+      if (!response.ok) throw new Error(`Erro ao atualizar perfil: ${response.status}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
       return false;
     }
   }
@@ -498,6 +572,7 @@ class AuthManager {
     this.key = key;
     this.sessionKey = 'supabase_auth_session';
     this.userKey = 'supabase_auth_user';
+    this.profileKey = 'supabase_user_profile';
   }
 
   getStoredSession() {
@@ -508,6 +583,17 @@ class AuthManager {
   getUser() {
     const raw = sessionStorage.getItem(this.userKey);
     return raw ? JSON.parse(raw) : null;
+  }
+
+  getProfile() {
+    const raw = sessionStorage.getItem(this.profileKey);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  getDisplayName() {
+    const profile = this.getProfile();
+    const user = this.getUser();
+    return profile?.apelido || profile?.nome || user?.email || 'Usuário';
   }
 
   getAccessToken() {
@@ -522,6 +608,46 @@ class AuthManager {
     }
   }
 
+  saveProfile(profile) {
+    if (!profile) return;
+    sessionStorage.setItem(this.profileKey, JSON.stringify(profile));
+  }
+
+  async ensureProfile() {
+    const user = this.getUser();
+    const email = user?.email;
+    if (!email) return null;
+
+    let profile = await supabase.getUsuarioByEmail(email);
+
+    if (!profile) {
+      const defaultName = email.split('@')[0] || 'Usuário';
+      const inserted = await supabase.insertUsuario({
+        email,
+        nome: defaultName,
+        apelido: defaultName,
+        url_imagem: null
+      });
+      if (!inserted) return null;
+      profile = await supabase.getUsuarioByEmail(email);
+    }
+
+    if (profile) this.saveProfile(profile);
+    return profile;
+  }
+
+  async updateProfile(updates) {
+    const user = this.getUser();
+    const email = user?.email;
+    if (!email) return false;
+
+    const ok = await supabase.updateUsuarioByEmail(email, updates);
+    if (!ok) return false;
+
+    await this.ensureProfile();
+    return true;
+  }
+
   async login(email, password) {
     const response = await fetch(`${this.url}/auth/v1/token?grant_type=password`, {
       method: 'POST',
@@ -534,6 +660,7 @@ class AuthManager {
     if (!response.ok) return null;
     const data = await response.json();
     this.saveSession(data);
+    await this.ensureProfile();
     return data;
   }
 
@@ -553,6 +680,7 @@ class AuthManager {
   logout() {
     sessionStorage.removeItem(this.sessionKey);
     sessionStorage.removeItem(this.userKey);
+    sessionStorage.removeItem(this.profileKey);
   }
 
   isAuthenticated() {
@@ -568,11 +696,21 @@ class OneSignalManager {
 
   async init() {
     if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
+
+    const isGithubPages = window.location.hostname.endsWith('github.io');
+    const projectPath = window.location.pathname.split('/').filter(Boolean)[0] || '';
+    const basePath = isGithubPages && projectPath ? `/${projectPath}` : '';
+    const workerPath = `${basePath}/OneSignalSDKWorker.js`;
+    const updaterWorkerPath = `${basePath}/OneSignalSDKUpdaterWorker.js`;
+    const workerScope = `${basePath}/`;
+
     window.OneSignalDeferred.push(async (OneSignal) => {
       await OneSignal.init({
         appId: ONE_SIGNAL_APP_ID,
-        serviceWorkerPath: 'OneSignalSDKWorker.js',
-        serviceWorkerUpdaterPath: 'OneSignalSDKUpdaterWorker.js',
+        serviceWorkerPath: workerPath,
+        serviceWorkerUpdaterPath: updaterWorkerPath,
+        path: workerScope,
+        serviceWorkerParam: { scope: workerScope },
         notifyButton: { enable: true }
       });
       this.ready = true;
@@ -712,6 +850,11 @@ function ensureAuthenticated() {
     window.location.href = 'index.html';
     return false;
   }
+
+  if (authManager.isAuthenticated()) {
+    authManager.ensureProfile().catch(() => null);
+  }
+
   return true;
 }
 
