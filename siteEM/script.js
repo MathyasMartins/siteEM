@@ -326,25 +326,33 @@ class CloudinaryAPI {
 
   // Upload de imagem
   async uploadImage(file) {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', this.uploadPreset);
+  try {
 
-      const response = await fetch(this.uploadUrl, {
-        method: 'POST',
-        body: formData
-      });
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', this.uploadPreset);
 
-      if (!response.ok) throw new Error(`Erro ao fazer upload: ${response.status}`);
+    const response = await fetch(this.uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
 
-      const data = await response.json();
-      return data.secure_url; // Retorna a URL segura da imagem
-    } catch (error) {
-      console.error('Erro ao fazer upload:', error);
-      return null;
+    if (!response.ok) {
+      throw new Error(`Erro ao fazer upload: ${response.status}`);
     }
+
+    const data = await response.json();
+
+    return {
+      secureUrl: data.secure_url,
+      publicId: data.public_id
+    };
+
+  } catch (error) {
+    console.error('Erro ao fazer upload:', error);
+    return null;
   }
+}
 }
 
 // ============================================================================
