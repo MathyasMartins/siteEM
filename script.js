@@ -756,30 +756,29 @@ class OneSignalManager {
     if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
 
     const basePath = this.getBasePath();
-    const workerPath = `${basePath}/OneSignalSDKWorker.js`;
+    const workerPath = `${basePath}/OneSignalSDK.sw.js`;
     const updaterWorkerPath = `${basePath}/OneSignalSDKUpdaterWorker.js`;
     const workerScope = `${basePath}/`;
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register(workerPath, { scope: workerScope })
-        .then(() => console.log('OneSignal Worker registrado em:', workerPath))
-        .catch((error) => console.error('Erro ao registrar OneSignal Worker:', error));
-    }
-
     window.OneSignalDeferred.push(async (OneSignal) => {
-      await OneSignal.init({
-        appId: ONE_SIGNAL_APP_ID,
-        serviceWorkerPath: workerPath,
-        serviceWorkerUpdaterPath: updaterWorkerPath,
-        path: workerScope,
-        serviceWorkerParam: { scope: workerScope },
-        notifyButton: { enable: true },
-        allowLocalhostAsSecureOrigin: true
-      });
-      this.ready = true;
-      const user = authManager.getUser();
-      if (user?.id) {
-        await OneSignal.login(user.id);
+      try {
+        await OneSignal.init({
+          appId: ONE_SIGNAL_APP_ID,
+          serviceWorkerPath: workerPath,
+          serviceWorkerUpdaterPath: updaterWorkerPath,
+          path: workerScope,
+          serviceWorkerParam: { scope: workerScope },
+          notifyButton: { enable: true },
+          allowLocalhostAsSecureOrigin: true
+        });
+        this.ready = true;
+        const user = authManager.getUser();
+        if (user?.id) {
+          await OneSignal.login(user.id);
+        }
+      } catch (error) {
+        this.ready = false;
+        console.warn('OneSignal indisponível no momento. Notificações push foram desativadas sem impactar o restante do app.', error);
       }
     });
   }
