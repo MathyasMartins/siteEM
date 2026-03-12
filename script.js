@@ -756,7 +756,7 @@ class OneSignalManager {
     if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
 
     const basePath = this.getBasePath();
-    const workerPath = `${basePath}/OneSignalSDKWorker.js`;
+    const workerPath = `${basePath}/OneSignalSDK.sw.js`;
     const updaterWorkerPath = `${basePath}/OneSignalSDKUpdaterWorker.js`;
     const workerScope = `${basePath}/`;
 
