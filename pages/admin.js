@@ -65,7 +65,7 @@ async function loadConfigForm() {
   const form = document.getElementById('configForm');
   if (!form) return;
 
-  const config = await supabase.getConfig();
+  const config = await supabaseApi.getConfig();
 
   if (config) {
     document.getElementById('coupleNameInput').value = config.nome_casal;
@@ -88,7 +88,7 @@ async function loadConfigForm() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Salvando...';
 
-    const result = await supabase.updateConfig(updates);
+    const result = await supabaseApi.updateConfig(updates);
 
     submitBtn.disabled = false;
     submitBtn.textContent = 'Salvar Configurações';
@@ -130,7 +130,7 @@ async function loadPhotosSection() {
         const uploaded = await cloudinary.uploadImage(file);
         if (!uploaded?.secureUrl) throw new Error('Upload concluído sem URL válida.');
 
-        const fotoInserida = await supabase.insertFoto(uploaded.secureUrl, uploaded.publicId);
+        const fotoInserida = await supabaseApi.insertFoto(uploaded.secureUrl, uploaded.publicId);
         if (!fotoInserida?.id) throw new Error('Upload feito, mas não foi possível salvar a imagem no Supabase.');
 
         const autorEmail = authManager.getUser()?.email || null;
@@ -153,7 +153,7 @@ async function loadPhotosSection() {
     });
   }
 
-  const fotos = await supabase.getFotos();
+  const fotos = await supabaseApi.getFotos();
   const photosList = document.getElementById('photosList');
   if (!photosList) return;
 
@@ -180,12 +180,12 @@ async function loadPhotosSection() {
 async function deleteFoto(id) {
   if (!confirm('Tem certeza que deseja deletar esta foto?')) return;
 
-  const foto = await supabase.getFotoById(id);
+  const foto = await supabaseApi.getFotoById(id);
   if (foto?.public_id) {
     await cloudinary.deleteImage(foto.public_id);
   }
 
-  const result = await supabase.deleteFoto(id);
+  const result = await supabaseApi.deleteFoto(id);
   if (result) {
     showNotification('Foto deletada com sucesso!', 'success');
     await loadPhotosSection();
@@ -210,7 +210,7 @@ async function loadRecadinhosSection() {
       submitBtn.textContent = 'Adicionando...';
 
       const autor = authManager.getDisplayName();
-      const recadinho = await supabase.insertRecadinho(autor, message);
+      const recadinho = await supabaseApi.insertRecadinho(autor, message);
 
       submitBtn.disabled = false;
       submitBtn.textContent = 'Adicionar Recadinho';
@@ -232,7 +232,7 @@ async function loadRecadinhosSection() {
     });
   }
 
-  const recs = await supabase.getRecadinhos(false);
+  const recs = await supabaseApi.getRecadinhos(false);
   const allList = document.getElementById('allRecadinhosList');
 
   if (allList) {
@@ -259,7 +259,7 @@ async function loadRecadinhosSection() {
 
 async function deleteRecadinho(id) {
   if (!confirm('Tem certeza que deseja deletar este recadinho?')) return;
-  const result = await supabase.deleteRecadinho(id);
+  const result = await supabaseApi.deleteRecadinho(id);
   showNotification(result ? 'Recadinho deletado com sucesso!' : 'Erro ao deletar recadinho', result ? 'success' : 'error');
   if (result) await loadRecadinhosSection();
 }
@@ -288,7 +288,7 @@ async function loadAgendaSection() {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Adicionando...';
 
-      const result = await supabase.insertAgenda(titulo, data, mensagem || null);
+      const result = await supabaseApi.insertAgenda(titulo, data, mensagem || null);
       submitBtn.disabled = false;
       submitBtn.textContent = 'Adicionar à Agenda';
 
@@ -309,7 +309,7 @@ async function loadAgendaSection() {
     });
   }
 
-  const agenda = await supabase.getAgenda();
+  const agenda = await supabaseApi.getAgenda();
   const agendaList = document.getElementById('agendaList');
   if (!agendaList) return;
 
@@ -335,7 +335,7 @@ async function loadAgendaSection() {
 
 async function deleteAgenda(id) {
   if (!confirm('Tem certeza que deseja deletar este evento?')) return;
-  const result = await supabase.deleteAgenda(id);
+  const result = await supabaseApi.deleteAgenda(id);
   showNotification(result ? 'Evento deletado com sucesso!' : 'Erro ao deletar evento', result ? 'success' : 'error');
   if (result) await loadAgendaSection();
 }
@@ -346,7 +346,7 @@ async function loadSurpresasSection() {
   const fotoSelect = document.getElementById('surpresaFotoSelect');
   const cancelBtn = document.getElementById('surpresaCancelBtn');
 
-  const fotos = await supabase.getFotos();
+  const fotos = await supabaseApi.getFotos();
   fotoSelect.innerHTML = '<option value="">Sem foto</option>';
   fotos.forEach((foto) => {
     const opt = document.createElement('option');
@@ -375,12 +375,12 @@ async function loadSurpresasSection() {
 
       let referenciaId = id || null;
       const ok = id
-        ? await supabase.updateSurpresa(id, payload)
-        : !!(await supabase.insertSurpresa(payload));
+        ? await supabaseApi.updateSurpresa(id, payload)
+        : !!(await supabaseApi.insertSurpresa(payload));
 
       if (ok) {
         if (!id) {
-          const surpresasAtualizadas = await supabase.getSurpresas();
+          const surpresasAtualizadas = await supabaseApi.getSurpresas();
           referenciaId = surpresasAtualizadas[0]?.id || null;
         }
 
@@ -408,7 +408,7 @@ async function loadSurpresasSection() {
     });
   }
 
-  const surpresas = await supabase.getSurpresas();
+  const surpresas = await supabaseApi.getSurpresas();
   window.__surpresasCache = surpresas;
   if (!list) return;
   list.innerHTML = surpresas.length ? '' : '<p style="color: var(--text-secondary);">Nenhuma surpresa cadastrada.</p>';
@@ -445,7 +445,7 @@ function editSurpresa(id) {
 
 async function deleteSurpresa(id) {
   if (!confirm('Deseja remover esta surpresa?')) return;
-  const result = await supabase.deleteSurpresa(id);
+  const result = await supabaseApi.deleteSurpresa(id);
   showNotification(result ? 'Surpresa removida!' : 'Erro ao remover surpresa', result ? 'success' : 'error');
   if (result) await loadSurpresasSection();
 }
@@ -458,7 +458,7 @@ async function setupBackupRestore() {
   exportBtn?.addEventListener('click', async () => {
     exportBtn.disabled = true;
     exportBtn.textContent = 'Exportando...';
-    const dados = await supabase.exportarDados();
+    const dados = await supabaseApi.exportarDados();
     if (dados) {
       const filename = `site-romantico-backup-${new Date().toISOString().split('T')[0]}.json`;
       downloadFile(JSON.stringify(dados, null, 2), filename, 'application/json');
@@ -480,7 +480,7 @@ async function setupBackupRestore() {
       try {
         const dados = JSON.parse(event.target.result);
         if (!confirm('Tem certeza que deseja importar estes dados?')) return;
-        const result = await supabase.importarDados(dados);
+        const result = await supabaseApi.importarDados(dados);
         showNotification(result ? 'Dados importados com sucesso!' : 'Erro ao importar dados', result ? 'success' : 'error');
       } catch (_error) {
         showNotification('Arquivo inválido', 'error');

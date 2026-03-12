@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================================================
 
 async function loadFotos() {
-  fotos = await supabase.getFotos();
+  fotos = await supabaseApi.getFotos();
   renderGallery();
 }
 

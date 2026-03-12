@@ -670,18 +670,18 @@ class AuthManager {
     const email = user?.email;
     if (!email) return null;
 
-    let profile = await supabase.getUsuarioByEmail(email);
+    let profile = await supabaseApi.getUsuarioByEmail(email);
 
     if (!profile) {
       const defaultName = email.split('@')[0] || 'Usuário';
-      const inserted = await supabase.insertUsuario({
+      const inserted = await supabaseApi.insertUsuario({
         email,
         nome: defaultName,
         apelido: defaultName,
         url_imagem: null
       });
       if (!inserted) return null;
-      profile = await supabase.getUsuarioByEmail(email);
+      profile = await supabaseApi.getUsuarioByEmail(email);
     }
 
     if (profile) this.saveProfile(profile);
@@ -693,7 +693,7 @@ class AuthManager {
     const email = user?.email;
     if (!email) return false;
 
-    const ok = await supabase.updateUsuarioByEmail(email, updates);
+    const ok = await supabaseApi.updateUsuarioByEmail(email, updates);
     if (!ok) return false;
 
     await this.ensureProfile();
@@ -801,7 +801,7 @@ class NotificationManager {
   }
 
   async getRecipientEmails(authorEmail) {
-    const emails = await supabase.getUsuariosEmails();
+    const emails = await supabaseApi.getUsuariosEmails();
     const unique = [...new Set(emails)];
     return unique.filter((email) => email && email !== authorEmail);
   }
@@ -810,7 +810,7 @@ class NotificationManager {
     const recipients = await this.getRecipientEmails(autorEmail);
 
     if (recipients.length === 0) {
-      const notification = await supabase.createNotification({
+      const notification = await supabaseApi.createNotification({
         tipo,
         mensagem,
         autor_email: autorEmail,
@@ -827,7 +827,7 @@ class NotificationManager {
 
     const inserted = [];
     for (const destinoEmail of recipients) {
-      const notification = await supabase.createNotification({
+      const notification = await supabaseApi.createNotification({
         tipo,
         mensagem,
         autor_email: autorEmail,
@@ -968,7 +968,7 @@ class ThemeManager {
 // INICIALIZAR INSTÂNCIAS GLOBAIS
 // ============================================================================
 
-const supabase = new SupabaseAPI(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseApi = new SupabaseAPI(SUPABASE_URL, SUPABASE_ANON_KEY);
 const cloudinary = new CloudinaryAPI(CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET);
 const themeManager = new ThemeManager();
 const authManager = new AuthManager(SUPABASE_URL, SUPABASE_ANON_KEY);

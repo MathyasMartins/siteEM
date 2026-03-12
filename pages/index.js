@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadConfig() {
-  const config = await supabase.getConfig();
+  const config = await supabaseApi.getConfig();
   if (config) {
     const coupleNameHero = document.getElementById('coupleNameHero');
     if (coupleNameHero) coupleNameHero.textContent = config.nome_casal;
@@ -104,7 +104,7 @@ function updateCounters() {
 }
 
 async function loadFotos() {
-  fotos = await supabase.getFotos();
+  fotos = await supabaseApi.getFotos();
 
   if (fotos.length === 0) {
     const slideshowContainer = document.getElementById('slideshowContainer');
@@ -162,7 +162,7 @@ function goToSlide(index) {
 }
 
 async function loadRecadinhos() {
-  recadinhos = await supabase.getRecadinhos(true);
+  recadinhos = await supabaseApi.getRecadinhos(true);
   renderRecadinhos();
 }
 
@@ -211,7 +211,7 @@ function setupRecadinhoForm() {
     submitBtn.textContent = 'Enviando...';
 
     const author = authManager.getDisplayName();
-    const recadinho = await supabase.insertRecadinho(author, message);
+    const recadinho = await supabaseApi.insertRecadinho(author, message);
 
     submitBtn.disabled = false;
     submitBtn.textContent = 'Enviar Recadinho ❤️';
@@ -243,7 +243,7 @@ async function checkMeetingNotification() {
 }
 
 async function checkTodayAgendaNotifications() {
-  const agenda = await supabase.getAgenda();
+  const agenda = await supabaseApi.getAgenda();
   const hoje = DateUtils.toISODate(new Date());
 
   for (const item of agenda.filter((entry) => entry.data?.startsWith(hoje))) {
@@ -264,7 +264,7 @@ async function checkTodayAgendaNotifications() {
 }
 
 async function renderSurpriseFloatingButton() {
-  const surpresas = await supabase.getSurpresas();
+  const surpresas = await supabaseApi.getSurpresas();
   const hoje = DateUtils.toISODate(new Date());
   const user = authManager.getUser();
 

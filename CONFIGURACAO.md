@@ -10,8 +10,9 @@ Este documento fornece instruções passo a passo para configurar o Supabase, Cl
 2. [Configuração do Cloudinary](#configuração-do-cloudinary)
 3. [Configuração do Projeto](#configuração-do-projeto)
 4. [Publicação no GitHub Pages](#publicação-no-github-pages)
-5. [Exemplos de Chamadas REST](#exemplos-de-chamadas-rest)
-6. [Troubleshooting](#troubleshooting)
+5. [Notificações (Realtime + Edge Function + OneSignal)](#-notificações-realtime--edge-function--onesignal)
+6. [Exemplos de Chamadas REST](#-exemplos-de-chamadas-rest)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -166,6 +167,72 @@ git push -u origin main
 
 Acesse a URL gerada pelo GitHub Pages e seu site estará ao vivo!
 
+
+---
+
+## 🔔 Notificações (Realtime + Edge Function + OneSignal)
+
+Além do código do site, **essas configurações são obrigatórias** para o sistema de notificações funcionar em produção.
+
+### 1) Banco de dados: tabela `notificacoes` + políticas
+
+1. Reexecute o `SUPABASE_SCHEMA.sql` (ou aplique apenas o bloco de `notificacoes`).
+2. Confirme no Supabase:
+   - tabela `notificacoes` criada
+   - RLS habilitado
+   - políticas `notificacoes_read_auth`, `notificacoes_insert_auth`, `notificacoes_update_auth`
+
+### 2) Realtime do Supabase
+
+1. Acesse **Database → Replication** no Supabase.
+2. Garanta que a tabela `public.notificacoes` esteja incluída na publicação do Realtime.
+3. Se necessário, habilite Realtime para essa tabela.
+
+### 3) Deploy da Edge Function `notificacoes-dispatch`
+
+No terminal com Supabase CLI:
+
+```bash
+supabase functions deploy notificacoes-dispatch
+```
+
+A função está em:
+
+- `supabase/functions/notificacoes-dispatch/index.ts`
+
+### 4) Secrets obrigatórios da Edge Function
+
+Configure os secrets (nunca no frontend):
+
+```bash
+supabase secrets set SUPABASE_URL=https://SEU_PROJETO.supabase.co
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY=SEU_SERVICE_ROLE_KEY
+supabase secrets set RESEND_API_KEY=SEU_TOKEN_RESEND
+supabase secrets set EMAIL_FROM=notificacoes@seu-dominio.com
+supabase secrets set ONESIGNAL_REST_API_KEY=SUA_CHAVE_REST_ONESIGNAL
+supabase secrets set ONESIGNAL_APP_ID=SEU_APP_ID_ONESIGNAL
+```
+
+> Se `RESEND_API_KEY` e/ou `ONESIGNAL_REST_API_KEY` não estiverem configurados, a função continuará respondendo, mas os envios correspondentes serão ignorados.
+
+### 5) OneSignal + Service Worker no GitHub Pages
+
+Garanta que estes arquivos existam na raiz publicada do projeto:
+
+- `/OneSignalSDKWorker.js`
+- `/OneSignalSDKUpdaterWorker.js`
+
+Sem isso, o OneSignal pode falhar com `404` no worker.
+
+### 6) Ordem esperada de funcionamento
+
+1. Usuário executa ação (recado, imagem, surpresa, agenda).
+2. Frontend grava em `notificacoes`.
+3. Realtime atualiza interface em tempo real.
+4. Frontend chama `functions/v1/notificacoes-dispatch`.
+5. Edge Function envia email/push para destinatários (exceto autor).
+
+
 ---
 
 ## 📡 Exemplos de Chamadas REST
@@ -243,7 +310,7 @@ const insertRecadinho = async (autor, mensagem) => {
       body: JSON.stringify({
         autor: autor,
         mensagem: mensagem,
-        aprovado: false
+        aprovado: true
       })
     }
   );
