@@ -1,73 +1,53 @@
-// ============================================================================
-// PÁGINA DE SURPRESA - surpresa.html
-// ============================================================================
-// Lógica para exibir mensagens românticas com animações
-// ============================================================================
-
-// ============================================================================
-// INICIALIZAÇÃO
-// ============================================================================
-
 document.addEventListener('DOMContentLoaded', async () => {
-  // Carregar mensagem especial
+  if (!ensureAuthenticated()) return;
   await loadSurpriseMessage();
-  
-  // Criar confete e corações flutuantes
   createConfetti();
   createFloatingHearts();
 });
 
-// ============================================================================
-// CARREGAR MENSAGEM
-// ============================================================================
-
 async function loadSurpriseMessage() {
-  const config = await supabase.getConfig();
-  const agenda = await supabase.getAgenda();
-  
   const titleEl = document.getElementById('surpriseTitle');
   const messageEl = document.getElementById('surpriseMessage');
-  
+  const imageEl = document.getElementById('surpriseImage');
   if (!titleEl || !messageEl) return;
-  
-  // Verificar se há data especial hoje
-  const today = DateUtils.toISODate(new Date());
-  const todayEvent = agenda.find(e => DateUtils.toISODate(e.data) === today);
-  
-  if (todayEvent) {
-    // Há um evento especial hoje
-    titleEl.textContent = `${todayEvent.titulo}! 🎉`;
-    messageEl.innerHTML = `
-      <p>${todayEvent.mensagem || 'Hoje é um dia muito especial para nós!'}</p>
-      <p style="margin-top: var(--spacing-lg);">
-        Você significa tudo para mim.
-        <span class="heart-animation">❤️</span>
-      </p>
-    `;
-  } else {
-    // Mensagem padrão
-    titleEl.textContent = `Surpresa Especial para Você! 🎁`;
-    messageEl.innerHTML = `
-      <p>Você é o amor da minha vida.</p>
-      <p style="margin-top: var(--spacing-md);">
-        Cada dia ao seu lado é uma bênção.
-        <span class="heart-animation">💕</span>
-      </p>
-      <p style="margin-top: var(--spacing-md);">
-        Obrigado por ser tão especial!
-      </p>
-    `;
-  }
-}
 
-// ============================================================================
-// EFEITOS VISUAIS
-// ============================================================================
+  const params = new URLSearchParams(window.location.search);
+  const surpresaId = Number(params.get('surpresa'));
+
+  const surpresas = await supabase.getSurpresas();
+  const agenda = await supabase.getAgenda();
+  const fotos = await supabase.getFotos();
+
+  const today = DateUtils.toISODate(new Date());
+  const surpresaSelecionada = surpresaId
+    ? surpresas.find((item) => item.id === surpresaId)
+    : surpresas.find((item) => item.data === today);
+
+  if (surpresaSelecionada) {
+    titleEl.textContent = `${surpresaSelecionada.titulo} 🎉`;
+    messageEl.innerHTML = `<p>${surpresaSelecionada.mensagem}</p>`;
+    const foto = fotos.find((item) => item.id === surpresaSelecionada.foto_id);
+    if (foto && imageEl) {
+      imageEl.src = foto.url;
+      imageEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  const todayEvent = agenda.find((e) => DateUtils.toISODate(e.data) === today);
+  if (todayEvent) {
+    titleEl.textContent = `${todayEvent.titulo}! 🎉`;
+    messageEl.innerHTML = `<p>${todayEvent.mensagem || 'Hoje é um dia muito especial para nós!'}</p>`;
+    return;
+  }
+
+  titleEl.textContent = 'Surpresa Especial para Você! 🎁';
+  messageEl.innerHTML = `<p>Você é o amor da minha vida.</p><p style="margin-top: var(--spacing-md);">Cada dia ao seu lado é uma bênção. <span class="heart-animation">💕</span></p>`;
+}
 
 function createConfetti() {
   const confettiCount = 50;
   const colors = ['#e91e63', '#ff6b9d', '#ffc0cb', '#ffffff'];
-  
   for (let i = 0; i < confettiCount; i++) {
     setTimeout(() => {
       const confetti = document.createElement('div');
@@ -76,8 +56,6 @@ function createConfetti() {
       confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
       confetti.style.animationDelay = Math.random() * 0.5 + 's';
       document.body.appendChild(confetti);
-      
-      // Remover após animação
       setTimeout(() => confetti.remove(), 3500);
     }, i * 30);
   }
@@ -85,9 +63,7 @@ function createConfetti() {
 
 function createFloatingHearts() {
   const hearts = ['❤️', '💕', '💖', '💗', '💝'];
-  const heartCount = 10;
-  
-  for (let i = 0; i < heartCount; i++) {
+  for (let i = 0; i < 10; i++) {
     const heart = document.createElement('div');
     heart.className = 'floating-heart';
     heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
@@ -98,7 +74,3 @@ function createFloatingHearts() {
     document.body.appendChild(heart);
   }
 }
-
-// ============================================================================
-// FIM DO SCRIPT
-// ============================================================================

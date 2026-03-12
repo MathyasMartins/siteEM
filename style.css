@@ -932,6 +932,31 @@ footer {
   }
 }
 
+
+.login-card {
+  max-width: 720px;
+  margin: var(--spacing-2xl) auto;
+}
+
+.floating-surprise {
+  position: fixed;
+  right: var(--spacing-md);
+  bottom: var(--spacing-md);
+  background: var(--bg-primary);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  max-width: 320px;
+  padding: var(--spacing-md);
+  z-index: 1200;
+  animation: fadeIn var(--transition-normal);
+}
+
+.floating-surprise p {
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-primary);
+}
+
 /* ============================================================================
    UTILITÁRIOS
    ============================================================================ */
