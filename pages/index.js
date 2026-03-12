@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateThemeToggle();
   if (!ensureAuthenticated()) return;
 
+  await authManager.ensureProfile();
   await loadConfig();
   await loadFotos();
   await loadRecadinhos();
@@ -28,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadConfig() {
-  const config = await supabase.getConfig();
+  const config = await supabaseApi.getConfig();
   if (config) {
     const coupleNameHero = document.getElementById('coupleNameHero');
     if (coupleNameHero) coupleNameHero.textContent = config.nome_casal;
@@ -103,7 +104,7 @@ function updateCounters() {
 }
 
 async function loadFotos() {
-  fotos = await supabase.getFotos();
+  fotos = await supabaseApi.getFotos();
 
   if (fotos.length === 0) {
     const slideshowContainer = document.getElementById('slideshowContainer');
@@ -161,7 +162,7 @@ function goToSlide(index) {
 }
 
 async function loadRecadinhos() {
-  recadinhos = await supabase.getRecadinhos(true);
+  recadinhos = await supabaseApi.getRecadinhos(true);
   renderRecadinhos();
 }
 
@@ -209,17 +210,24 @@ function setupRecadinhoForm() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Enviando...';
 
-    const author = authManager.getUser()?.email || 'Usuário';
-    const result = await supabase.insertRecadinho(author, message);
+    const author = authManager.getDisplayName();
+    const recadinho = await supabaseApi.insertRecadinho(author, message);
 
     submitBtn.disabled = false;
     submitBtn.textContent = 'Enviar Recadinho ❤️';
 
-    if (result) {
-      oneSignalManager.notifyOnce(`new-recadinho-${Date.now()}`, 'Recadinho enviado', `${author} enviou um recadinho.`);
-      showNotification('Recadinho enviado com sucesso! Aguardando aprovação.', 'success');
+    if (recadinho) {
+      await notificationManager.createNotification({
+        tipo: 'recado',
+        mensagem: `${author} enviou um novo recadinho.`,
+        autorEmail: authManager.getUser()?.email || null,
+        referenciaId: recadinho.id
+      });
+
+      showNotification('Recadinho enviado com sucesso!', 'success');
       textarea.value = '';
       charCount.textContent = '0/200';
+      await loadRecadinhos();
     } else {
       showNotification('Erro ao enviar recadinho', 'error');
     }
@@ -235,15 +243,28 @@ async function checkMeetingNotification() {
 }
 
 async function checkTodayAgendaNotifications() {
-  const agenda = await supabase.getAgenda();
+  const agenda = await supabaseApi.getAgenda();
   const hoje = DateUtils.toISODate(new Date());
-  agenda
-    .filter((item) => item.data?.startsWith(hoje))
-    .forEach((item) => oneSignalManager.notifyOnce(`agenda-${item.id}-${hoje}`, 'Data especial chegou 🎉', item.titulo));
+
+  for (const item of agenda.filter((entry) => entry.data?.startsWith(hoje))) {
+    const localKey = `agenda-arrival-${item.id}-${hoje}`;
+
+    if (!localStorage.getItem(localKey)) {
+      await notificationManager.createNotification({
+        tipo: 'agenda',
+        mensagem: `Hoje é o dia de "${item.titulo}" 🎉`,
+        autorEmail: null,
+        referenciaId: item.id
+      });
+      localStorage.setItem(localKey, '1');
+    }
+
+    oneSignalManager.notifyOnce(`agenda-${item.id}-${hoje}`, 'Data especial chegou 🎉', item.titulo);
+  }
 }
 
 async function renderSurpriseFloatingButton() {
-  const surpresas = await supabase.getSurpresas();
+  const surpresas = await supabaseApi.getSurpresas();
   const hoje = DateUtils.toISODate(new Date());
   const user = authManager.getUser();
 

@@ -110,11 +110,14 @@ class SupabaseAPI {
         `${this.url}/rest/v1/recadinhos`,
         {
           method: 'POST',
-          headers: this.getHeaders(),
+          headers: {
+            ...this.getHeaders(),
+            'Prefer': 'return=representation'
+          },
           body: JSON.stringify({
             autor: autor,
             mensagem: mensagem,
-            aprovado: false
+            aprovado: true
           })
         }
       );
@@ -122,11 +125,13 @@ class SupabaseAPI {
       if (!response.ok) {
         throw new Error(`Erro ao inserir recadinho: ${response.status}`);
       }
-      return true;
+
+      const data = await response.json();
+      return data[0] || null;
 
     } catch (error) {
       console.error('Erro ao inserir recadinho:', error);
-      return false;
+      return null;
     }
   }
 
@@ -189,25 +194,53 @@ class SupabaseAPI {
   // Inserir foto
   async insertFoto(url, publicId = null) {
     try {
-      const response = await fetch(
+      const payload = { url: url };
+      if (publicId) {
+        payload.public_id = publicId;
+      }
+
+      let response = await fetch(
         `${this.url}/rest/v1/fotos`,
         {
           method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify({ url: url, public_id: publicId })
+          headers: {
+            ...this.getHeaders(),
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(payload)
         }
       );
+
+      // Compatibilidade com schemas antigos sem a coluna `public_id`
+      if (!response.ok && publicId) {
+        const responseText = await response.text();
+        const missingPublicIdColumn = responseText.includes('public_id') && responseText.includes('column');
+
+        if (response.status === 400 && missingPublicIdColumn) {
+          response = await fetch(
+            `${this.url}/rest/v1/fotos`,
+            {
+              method: 'POST',
+              headers: {
+                ...this.getHeaders(),
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify({ url: url })
+            }
+          );
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`Erro ao inserir foto: ${response.status}`);
       }
 
-      // 🔥 Não usa response.json()
-      return true;
+      const data = await response.json();
+      return data[0] || null;
 
     } catch (error) {
       console.error('Erro ao inserir foto:', error);
-      return false;
+      return null;
     }
   }
 
@@ -304,6 +337,99 @@ class SupabaseAPI {
     } catch (error) {
       console.error('Erro ao deletar agenda:', error);
       return false;
+    }
+  }
+
+  async getUsuarioByEmail(email) {
+    if (!email) return null;
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&order=created_at.asc&limit=1`,
+        { headers: this.getHeaders() }
+      );
+      if (!response.ok) throw new Error(`Erro ao buscar perfil: ${response.status}`);
+      const data = await response.json();
+      return data[0] || null;
+    } catch (error) {
+      console.error('Erro ao buscar perfil por email:', error);
+      return null;
+    }
+  }
+
+  async insertUsuario(payload) {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(payload)
+        }
+      );
+      if (!response.ok) throw new Error(`Erro ao inserir perfil: ${response.status}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao inserir perfil:', error);
+      return false;
+    }
+  }
+
+  async updateUsuarioByEmail(email, updates) {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`,
+        {
+          method: 'PATCH',
+          headers: this.getHeaders(),
+          body: JSON.stringify(updates)
+        }
+      );
+      if (!response.ok) throw new Error(`Erro ao atualizar perfil: ${response.status}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      return false;
+    }
+  }
+
+  async getUsuariosEmails() {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/usuarios?select=email`,
+        { headers: this.getHeaders() }
+      );
+      if (!response.ok) throw new Error(`Erro ao buscar emails dos usuários: ${response.status}`);
+      const data = await response.json();
+      return data.map((item) => item.email).filter(Boolean);
+    } catch (error) {
+      console.error('Erro ao buscar emails dos usuários:', error);
+      return [];
+    }
+  }
+
+  async createNotification(payload) {
+    try {
+      const response = await fetch(
+        `${this.url}/rest/v1/notificacoes`,
+        {
+          method: 'POST',
+          headers: {
+            ...this.getHeaders(),
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erro ao criar notificação: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data[0] || null;
+    } catch (error) {
+      console.error('Erro ao criar notificação:', error);
+      return null;
     }
   }
 
@@ -498,6 +624,7 @@ class AuthManager {
     this.key = key;
     this.sessionKey = 'supabase_auth_session';
     this.userKey = 'supabase_auth_user';
+    this.profileKey = 'supabase_user_profile';
   }
 
   getStoredSession() {
@@ -508,6 +635,17 @@ class AuthManager {
   getUser() {
     const raw = sessionStorage.getItem(this.userKey);
     return raw ? JSON.parse(raw) : null;
+  }
+
+  getProfile() {
+    const raw = sessionStorage.getItem(this.profileKey);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  getDisplayName() {
+    const profile = this.getProfile();
+    const user = this.getUser();
+    return profile?.apelido || profile?.nome || user?.email || 'Usuário';
   }
 
   getAccessToken() {
@@ -522,6 +660,46 @@ class AuthManager {
     }
   }
 
+  saveProfile(profile) {
+    if (!profile) return;
+    sessionStorage.setItem(this.profileKey, JSON.stringify(profile));
+  }
+
+  async ensureProfile() {
+    const user = this.getUser();
+    const email = user?.email;
+    if (!email) return null;
+
+    let profile = await supabaseApi.getUsuarioByEmail(email);
+
+    if (!profile) {
+      const defaultName = email.split('@')[0] || 'Usuário';
+      const inserted = await supabaseApi.insertUsuario({
+        email,
+        nome: defaultName,
+        apelido: defaultName,
+        url_imagem: null
+      });
+      if (!inserted) return null;
+      profile = await supabaseApi.getUsuarioByEmail(email);
+    }
+
+    if (profile) this.saveProfile(profile);
+    return profile;
+  }
+
+  async updateProfile(updates) {
+    const user = this.getUser();
+    const email = user?.email;
+    if (!email) return false;
+
+    const ok = await supabaseApi.updateUsuarioByEmail(email, updates);
+    if (!ok) return false;
+
+    await this.ensureProfile();
+    return true;
+  }
+
   async login(email, password) {
     const response = await fetch(`${this.url}/auth/v1/token?grant_type=password`, {
       method: 'POST',
@@ -534,6 +712,7 @@ class AuthManager {
     if (!response.ok) return null;
     const data = await response.json();
     this.saveSession(data);
+    await this.ensureProfile();
     return data;
   }
 
@@ -553,6 +732,7 @@ class AuthManager {
   logout() {
     sessionStorage.removeItem(this.sessionKey);
     sessionStorage.removeItem(this.userKey);
+    sessionStorage.removeItem(this.profileKey);
   }
 
   isAuthenticated() {
@@ -566,14 +746,35 @@ class OneSignalManager {
     this.lastNotified = new Set();
   }
 
+  getBasePath() {
+    const isGithubPages = window.location.hostname.endsWith('github.io');
+    const projectPath = window.location.pathname.split('/').filter(Boolean)[0] || '';
+    return isGithubPages && projectPath ? `/${projectPath}` : '';
+  }
+
   async init() {
     if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
+
+    const basePath = this.getBasePath();
+    const workerPath = `${basePath}/OneSignalSDKWorker.js`;
+    const updaterWorkerPath = `${basePath}/OneSignalSDKUpdaterWorker.js`;
+    const workerScope = `${basePath}/`;
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(workerPath, { scope: workerScope })
+        .then(() => console.log('OneSignal Worker registrado em:', workerPath))
+        .catch((error) => console.error('Erro ao registrar OneSignal Worker:', error));
+    }
+
     window.OneSignalDeferred.push(async (OneSignal) => {
       await OneSignal.init({
         appId: ONE_SIGNAL_APP_ID,
-        serviceWorkerPath: 'OneSignalSDKWorker.js',
-        serviceWorkerUpdaterPath: 'OneSignalSDKUpdaterWorker.js',
-        notifyButton: { enable: true }
+        serviceWorkerPath: workerPath,
+        serviceWorkerUpdaterPath: updaterWorkerPath,
+        path: workerScope,
+        serviceWorkerParam: { scope: workerScope },
+        notifyButton: { enable: true },
+        allowLocalhostAsSecureOrigin: true
       });
       this.ready = true;
       const user = authManager.getUser();
@@ -590,6 +791,95 @@ class OneSignalManager {
       new Notification(title, { body: message });
     }
     showNotification(`${title} — ${message}`, 'info');
+  }
+}
+
+class NotificationManager {
+  constructor() {
+    this.channel = null;
+    this.realtimeClient = null;
+  }
+
+  async getRecipientEmails(authorEmail) {
+    const emails = await supabaseApi.getUsuariosEmails();
+    const unique = [...new Set(emails)];
+    return unique.filter((email) => email && email !== authorEmail);
+  }
+
+  async createNotification({ tipo, mensagem, autorEmail, referenciaId = null }) {
+    const recipients = await this.getRecipientEmails(autorEmail);
+
+    if (recipients.length === 0) {
+      const notification = await supabaseApi.createNotification({
+        tipo,
+        mensagem,
+        autor_email: autorEmail,
+        destino_email: null,
+        referencia_id: referenciaId ? String(referenciaId) : null,
+        lida: false
+      });
+
+      if (notification) {
+        this.triggerDelivery(notification).catch(() => null);
+      }
+      return [notification].filter(Boolean);
+    }
+
+    const inserted = [];
+    for (const destinoEmail of recipients) {
+      const notification = await supabaseApi.createNotification({
+        tipo,
+        mensagem,
+        autor_email: autorEmail,
+        destino_email: destinoEmail,
+        referencia_id: referenciaId ? String(referenciaId) : null,
+        lida: false
+      });
+
+      if (notification) {
+        inserted.push(notification);
+        this.triggerDelivery(notification).catch(() => null);
+      }
+    }
+
+    return inserted;
+  }
+
+  async triggerDelivery(notification) {
+    const token = authManager.getAccessToken();
+    await fetch(`${SUPABASE_URL}/functions/v1/notificacoes-dispatch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ notificacao: notification })
+    });
+  }
+
+  initRealtime() {
+    if (!window.supabase?.createClient || this.channel) return;
+
+    this.realtimeClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const currentUserEmail = authManager.getUser()?.email;
+
+    this.channel = this.realtimeClient
+      .channel('notificacoes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notificacoes' },
+        (payload) => {
+          const data = payload.new;
+          const isOwn = data.autor_email && data.autor_email === currentUserEmail;
+          const isTarget = !data.destino_email || data.destino_email === currentUserEmail;
+
+          if (!isOwn && isTarget) {
+            showNotification(data.mensagem, 'info');
+          }
+        }
+      )
+      .subscribe();
   }
 }
 
@@ -678,11 +968,12 @@ class ThemeManager {
 // INICIALIZAR INSTÂNCIAS GLOBAIS
 // ============================================================================
 
-const supabase = new SupabaseAPI(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseApi = new SupabaseAPI(SUPABASE_URL, SUPABASE_ANON_KEY);
 const cloudinary = new CloudinaryAPI(CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET);
 const themeManager = new ThemeManager();
 const authManager = new AuthManager(SUPABASE_URL, SUPABASE_ANON_KEY);
 const oneSignalManager = new OneSignalManager();
+const notificationManager = new NotificationManager();
 
 // ============================================================================
 // SERVICE WORKER REGISTRATION (PWA)
@@ -690,7 +981,8 @@ const oneSignalManager = new OneSignalManager();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
+    const basePath = oneSignalManager.getBasePath();
+    navigator.serviceWorker.register(`${basePath}/sw.js`)
       .then(registration => console.log('Service Worker registrado:', registration))
       .catch(error => console.log('Erro ao registrar Service Worker:', error));
   });
@@ -701,6 +993,7 @@ if ('Notification' in window && Notification.permission === 'default') {
 }
 
 oneSignalManager.init();
+notificationManager.initRealtime();
 
 function ensureAuthenticated() {
   const onLoginPage = window.location.pathname.endsWith('login.html');
@@ -712,6 +1005,11 @@ function ensureAuthenticated() {
     window.location.href = 'index.html';
     return false;
   }
+
+  if (authManager.isAuthenticated()) {
+    authManager.ensureProfile().catch(() => null);
+  }
+
   return true;
 }
 
