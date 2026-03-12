@@ -123,7 +123,8 @@ async function loadPhotosSection() {
         const result = await supabase.insertFoto(uploaded.secureUrl, uploaded.publicId);
         if (!result) throw new Error('Erro ao salvar foto no Supabase');
 
-        oneSignalManager.notifyOnce(`foto-${uploaded.publicId || Date.now()}`, 'Nova foto', `${authManager.getDisplayName()} adicionou uma nova foto.`);
+        const user = authManager.getUser();
+        oneSignalManager.notifyOnce(`foto-${uploaded.publicId || Date.now()}`, 'Nova foto', `${user?.email || 'Usuário'} adicionou uma nova foto.`);
         showNotification('Foto enviada com sucesso!', 'success');
         fileInput.value = '';
         await loadPhotosSection();
