@@ -246,7 +246,7 @@ async function checkTodayAgendaNotifications() {
   const agenda = await supabaseApi.getAgenda();
   const hoje = DateUtils.toISODate(new Date());
 
-  for (const item of agenda.filter((entry) => entry.data?.startsWith(hoje))) {
+  for (const item of agenda.filter((entry) => DateUtils.toISODate(entry.data) === hoje)) {
     const localKey = `agenda-arrival-${item.id}-${hoje}`;
 
     if (!localStorage.getItem(localKey)) {
