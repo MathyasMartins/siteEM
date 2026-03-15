@@ -888,10 +888,41 @@ class NotificationManager {
 // ============================================================================
 
 class DateUtils {
+  static parseDateInput(value) {
+    if (!value && value !== 0) return null;
+    if (value instanceof Date) {
+      return isNaN(value.getTime()) ? null : new Date(value);
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+
+      const brMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (brMatch) {
+        const [, day, month, year] = brMatch;
+        const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+        return isNaN(parsed.getTime()) ? null : parsed;
+      }
+
+      const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) {
+        const [, year, month, day] = isoMatch;
+        const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+        return isNaN(parsed.getTime()) ? null : parsed;
+      }
+    }
+
+    const parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   // Calcular diferença entre duas datas
   static calculateDifference(startDate, endDate = new Date()) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = this.parseDateInput(startDate);
+    const end = this.parseDateInput(endDate);
+    if (!start || !end) return { days: 0, hours: 0, minutes: 0 };
+
     const diffMs = end - start;
 
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -912,7 +943,8 @@ class DateUtils {
 
   // Formatar data para padrão brasileiro
   static formatDate(date) {
-    const d = new Date(date);
+    const d = this.parseDateInput(date);
+    if (!d) return '';
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
@@ -921,8 +953,13 @@ class DateUtils {
 
   // Converter data para formato ISO (YYYY-MM-DD)
   static toISODate(date) {
-    const d = new Date(date);
-    return d.toISOString().split('T')[0];
+    const d = this.parseDateInput(date);
+    if (!d) return '';
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }
 
