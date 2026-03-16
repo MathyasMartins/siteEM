@@ -288,7 +288,8 @@ async function loadAgendaSection() {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Adicionando...';
 
-      const result = await supabaseApi.insertAgenda(titulo, data, mensagem || null);
+      const user = authManager.getUser();
+      const result = await supabaseApi.insertAgenda(titulo, data, mensagem || null, user?.id || null, user?.email || null);
       submitBtn.disabled = false;
       submitBtn.textContent = 'Adicionar à Agenda';
 
@@ -323,6 +324,7 @@ async function loadAgendaSection() {
         <p style="margin: 0; color: var(--text-primary); font-weight: 600;">${evento.titulo}</p>
         <p style="margin: var(--spacing-xs) 0 0 0; color: var(--text-secondary); font-size: var(--font-size-sm);">
           ${dataFormatada}${evento.mensagem ? `<br>${evento.mensagem}` : ''}
+          ${evento.created_by_email ? `<br><small>Criado por: ${evento.created_by_email}</small>` : ''}
         </p>
       </div>
       <div class="admin-item-actions">

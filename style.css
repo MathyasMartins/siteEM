@@ -572,13 +572,19 @@ footer {
 
 .lightbox-content {
   position: relative;
-  max-width: 90%;
-  max-height: 90%;
+  width: min(92vw, 1200px);
+  max-height: 92vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .lightbox-image {
+  width: auto;
+  height: auto;
   max-width: 100%;
-  max-height: 100%;
+  max-height: 92vh;
+  object-fit: contain;
   border-radius: var(--radius-lg);
 }
 
@@ -936,6 +942,26 @@ footer {
 .login-card {
   max-width: 720px;
   margin: var(--spacing-2xl) auto;
+}
+
+
+.index-special-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  padding: var(--spacing-lg);
+  animation: fadeIn var(--transition-normal);
+}
+
+.index-special-overlay .surprise-content {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-xl);
+}
+
+.index-special-overlay .surprise-content p {
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .floating-surprise {
