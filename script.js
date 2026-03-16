@@ -292,9 +292,17 @@ class SupabaseAPI {
     }
   }
   // Inserir evento na agenda
-  async insertAgenda(titulo, data, mensagem) {
+  async insertAgenda(titulo, data, mensagem, createdBy = null, createdByEmail = null) {
     try {
-      const response = await fetch(
+      const payload = {
+        titulo: titulo,
+        data: data,
+        mensagem: mensagem,
+        created_by: createdBy,
+        created_by_email: createdByEmail
+      };
+
+      let response = await fetch(
         `${this.url}/rest/v1/agenda`,
         {
           method: 'POST',
@@ -302,13 +310,33 @@ class SupabaseAPI {
             ...this.getHeaders(),
             'Prefer': 'return=representation'
           },
-          body: JSON.stringify({
-            titulo: titulo,
-            data: data,
-            mensagem: mensagem
-          })
+          body: JSON.stringify(payload)
         }
       );
+
+      if (!response.ok && (createdBy || createdByEmail)) {
+        const responseText = await response.text();
+        const missingCreatedByColumn = responseText.includes('created_by') && responseText.includes('column');
+        const missingCreatedByEmailColumn = responseText.includes('created_by_email') && responseText.includes('column');
+
+        if (response.status === 400 && (missingCreatedByColumn || missingCreatedByEmailColumn)) {
+          response = await fetch(
+            `${this.url}/rest/v1/agenda`,
+            {
+              method: 'POST',
+              headers: {
+                ...this.getHeaders(),
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify({
+                titulo: titulo,
+                data: data,
+                mensagem: mensagem
+              })
+            }
+          );
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`Erro ao inserir agenda: ${response.status}`);
@@ -784,12 +812,26 @@ class OneSignalManager {
     });
   }
 
-  notifyOnce(key, title, message) {
-    if (this.lastNotified.has(key)) return;
-    this.lastNotified.add(key);
+  notifyBrowser(title, message) {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, { body: message });
     }
+  }
+
+  getTitleByType(tipo) {
+    const map = {
+      recado: 'Novo recadinho 💌',
+      imagem: 'Nova imagem 📸',
+      agenda: 'Agenda especial 🗓️',
+      surpresa: 'Nova surpresa 🎁'
+    };
+    return map[tipo] || 'Nova atualização ❤️';
+  }
+
+  notifyOnce(key, title, message) {
+    if (this.lastNotified.has(key)) return;
+    this.lastNotified.add(key);
+    this.notifyBrowser(title, message);
     showNotification(`${title} — ${message}`, 'info');
   }
 }
@@ -875,7 +917,8 @@ class NotificationManager {
           const isTarget = !data.destino_email || data.destino_email === currentUserEmail;
 
           if (!isOwn && isTarget) {
-            showNotification(data.mensagem, 'info');
+            const title = oneSignalManager.getTitleByType(data.tipo);
+            oneSignalManager.notifyOnce(`db-${data.id}`, title, data.mensagem);
           }
         }
       )
@@ -888,10 +931,41 @@ class NotificationManager {
 // ============================================================================
 
 class DateUtils {
+  static parseDateInput(value) {
+    if (!value && value !== 0) return null;
+    if (value instanceof Date) {
+      return isNaN(value.getTime()) ? null : new Date(value);
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+
+      const brMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (brMatch) {
+        const [, day, month, year] = brMatch;
+        const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+        return isNaN(parsed.getTime()) ? null : parsed;
+      }
+
+      const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) {
+        const [, year, month, day] = isoMatch;
+        const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+        return isNaN(parsed.getTime()) ? null : parsed;
+      }
+    }
+
+    const parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   // Calcular diferença entre duas datas
   static calculateDifference(startDate, endDate = new Date()) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = this.parseDateInput(startDate);
+    const end = this.parseDateInput(endDate);
+    if (!start || !end) return { days: 0, hours: 0, minutes: 0 };
+
     const diffMs = end - start;
 
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -912,7 +986,8 @@ class DateUtils {
 
   // Formatar data para padrão brasileiro
   static formatDate(date) {
-    const d = new Date(date);
+    const d = this.parseDateInput(date);
+    if (!d) return '';
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
@@ -921,8 +996,13 @@ class DateUtils {
 
   // Converter data para formato ISO (YYYY-MM-DD)
   static toISODate(date) {
-    const d = new Date(date);
-    return d.toISOString().split('T')[0];
+    const d = this.parseDateInput(date);
+    if (!d) return '';
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }
 

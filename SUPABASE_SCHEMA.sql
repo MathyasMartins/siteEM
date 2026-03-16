@@ -60,9 +60,15 @@ CREATE TABLE IF NOT EXISTS agenda (
   titulo VARCHAR(255) NOT NULL,
   data DATE NOT NULL,
   mensagem TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_by_email VARCHAR(255),
   criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+
+-- Compatibilidade com bases já existentes (adiciona colunas caso ainda não existam)
+ALTER TABLE agenda ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+ALTER TABLE agenda ADD COLUMN IF NOT EXISTS created_by_email VARCHAR(255);
 
 
 -- ============================================================================
