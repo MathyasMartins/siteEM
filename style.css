@@ -938,6 +938,26 @@ footer {
   margin: var(--spacing-2xl) auto;
 }
 
+
+.index-special-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  padding: var(--spacing-lg);
+  animation: fadeIn var(--transition-normal);
+}
+
+.index-special-overlay .surprise-content {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-xl);
+}
+
+.index-special-overlay .surprise-content p {
+  color: rgba(255, 255, 255, 0.95);
+}
+
 .floating-surprise {
   position: fixed;
   right: var(--spacing-md);
