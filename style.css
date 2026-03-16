@@ -572,13 +572,19 @@ footer {
 
 .lightbox-content {
   position: relative;
-  max-width: 90%;
-  max-height: 90%;
+  width: min(92vw, 1200px);
+  max-height: 92vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .lightbox-image {
+  width: auto;
+  height: auto;
   max-width: 100%;
-  max-height: 100%;
+  max-height: 92vh;
+  object-fit: contain;
   border-radius: var(--radius-lg);
 }
 
