@@ -21,7 +21,7 @@ async function loadSurpriseMessage() {
   const today = DateUtils.toISODate(new Date());
   const surpresaSelecionada = surpresaId
     ? surpresas.find((item) => item.id === surpresaId)
-    : surpresas.find((item) => item.data === today);
+    : surpresas.find((item) => DateUtils.toISODate(item.data) === today);
 
   if (surpresaSelecionada) {
     titleEl.textContent = `${surpresaSelecionada.titulo} 🎉`;

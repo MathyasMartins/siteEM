@@ -292,9 +292,17 @@ class SupabaseAPI {
     }
   }
   // Inserir evento na agenda
-  async insertAgenda(titulo, data, mensagem) {
+  async insertAgenda(titulo, data, mensagem, createdBy = null, createdByEmail = null) {
     try {
-      const response = await fetch(
+      const payload = {
+        titulo: titulo,
+        data: data,
+        mensagem: mensagem,
+        created_by: createdBy,
+        created_by_email: createdByEmail
+      };
+
+      let response = await fetch(
         `${this.url}/rest/v1/agenda`,
         {
           method: 'POST',
@@ -302,13 +310,33 @@ class SupabaseAPI {
             ...this.getHeaders(),
             'Prefer': 'return=representation'
           },
-          body: JSON.stringify({
-            titulo: titulo,
-            data: data,
-            mensagem: mensagem
-          })
+          body: JSON.stringify(payload)
         }
       );
+
+      if (!response.ok && (createdBy || createdByEmail)) {
+        const responseText = await response.text();
+        const missingCreatedByColumn = responseText.includes('created_by') && responseText.includes('column');
+        const missingCreatedByEmailColumn = responseText.includes('created_by_email') && responseText.includes('column');
+
+        if (response.status === 400 && (missingCreatedByColumn || missingCreatedByEmailColumn)) {
+          response = await fetch(
+            `${this.url}/rest/v1/agenda`,
+            {
+              method: 'POST',
+              headers: {
+                ...this.getHeaders(),
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify({
+                titulo: titulo,
+                data: data,
+                mensagem: mensagem
+              })
+            }
+          );
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`Erro ao inserir agenda: ${response.status}`);
@@ -784,12 +812,26 @@ class OneSignalManager {
     });
   }
 
-  notifyOnce(key, title, message) {
-    if (this.lastNotified.has(key)) return;
-    this.lastNotified.add(key);
+  notifyBrowser(title, message) {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, { body: message });
     }
+  }
+
+  getTitleByType(tipo) {
+    const map = {
+      recado: 'Novo recadinho 💌',
+      imagem: 'Nova imagem 📸',
+      agenda: 'Agenda especial 🗓️',
+      surpresa: 'Nova surpresa 🎁'
+    };
+    return map[tipo] || 'Nova atualização ❤️';
+  }
+
+  notifyOnce(key, title, message) {
+    if (this.lastNotified.has(key)) return;
+    this.lastNotified.add(key);
+    this.notifyBrowser(title, message);
     showNotification(`${title} — ${message}`, 'info');
   }
 }
@@ -875,7 +917,8 @@ class NotificationManager {
           const isTarget = !data.destino_email || data.destino_email === currentUserEmail;
 
           if (!isOwn && isTarget) {
-            showNotification(data.mensagem, 'info');
+            const title = oneSignalManager.getTitleByType(data.tipo);
+            oneSignalManager.notifyOnce(`db-${data.id}`, title, data.mensagem);
           }
         }
       )

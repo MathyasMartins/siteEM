@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadRecadinhos();
   await checkTodayAgendaNotifications();
   await renderSurpriseFloatingButton();
+  await renderTodaySpecialScreen();
 
   if (fotos.length > 0) startSlideshow();
 
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateCounters();
     await checkMeetingNotification();
     await checkTodayAgendaNotifications();
+    await renderTodaySpecialScreen();
   }, 60000);
 
   setupRecadinhoForm();
@@ -279,6 +281,67 @@ async function renderSurpriseFloatingButton() {
   `;
 
   document.body.appendChild(container);
+}
+
+
+function getAgendaCreatorKey(item) {
+  return item?.created_by || item?.created_by_email || null;
+}
+
+function shouldHideSpecialFromCreator(item, user) {
+  if (!item || !user) return false;
+  return item.created_by === user.id || item.created_by_email === user.email;
+}
+
+function buildSpecialOverlayHtml(title, message) {
+  return `
+    <div class="surprise-content">
+      <h1>${escapeHtml(title)} 🎉</h1>
+      <p>${escapeHtml(message || 'Hoje é um dia muito especial para nós!')}</p>
+      <button class="btn btn-secondary" id="closeSpecialOverlayBtn">Continuar no site ❤️</button>
+    </div>
+  `;
+}
+
+async function renderTodaySpecialScreen() {
+  const currentOverlay = document.getElementById('todaySpecialOverlay');
+  const hoje = DateUtils.toISODate(new Date());
+  const user = authManager.getUser();
+
+  const [surpresas, agenda] = await Promise.all([
+    supabaseApi.getSurpresas(),
+    supabaseApi.getAgenda()
+  ]);
+
+  const surpresaDoDia = surpresas.find((item) => DateUtils.toISODate(item.data) === hoje && !shouldHideSpecialFromCreator(item, user));
+  const agendaDoDia = agenda.find((item) => DateUtils.toISODate(item.data) === hoje && !shouldHideSpecialFromCreator(item, user));
+  const itemDoDia = surpresaDoDia || agendaDoDia;
+
+  if (!itemDoDia) {
+    if (currentOverlay) currentOverlay.remove();
+    return;
+  }
+
+  const creatorKey = getAgendaCreatorKey(itemDoDia);
+  const localKey = `today-special-overlay-${itemDoDia.id}-${hoje}-${creatorKey || 'anon'}`;
+  if (localStorage.getItem(localKey) === '1') {
+    if (currentOverlay) currentOverlay.remove();
+    return;
+  }
+
+  if (currentOverlay) return;
+
+  const overlay = document.createElement('section');
+  overlay.id = 'todaySpecialOverlay';
+  overlay.className = 'index-special-overlay surprise-container';
+  overlay.innerHTML = buildSpecialOverlayHtml(itemDoDia.titulo || 'Dia Especial', itemDoDia.mensagem);
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('closeSpecialOverlayBtn')?.addEventListener('click', () => {
+    localStorage.setItem(localKey, '1');
+    overlay.remove();
+  });
 }
 
 function updateThemeToggle() {
