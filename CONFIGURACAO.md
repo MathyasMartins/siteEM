@@ -199,6 +199,7 @@ Você vai executar 8 etapas, nesta ordem:
 4. Vá em **Table Editor** e confirme:
    - tabela `notificacoes` existe
    - colunas esperadas existem (`tipo`, `mensagem`, `autor_email`, `destino_email`, `referencia_id`, `lida`, `created_at`)
+  - **atenção**: `referencia_id` está como UUID no schema atual; para IDs numéricos (agenda/recados/fotos), o frontend envia `null` para evitar erro 400.
 5. Vá em **Authentication → Policies** e confirme as políticas da tabela:
    - `notificacoes_read_auth`
    - `notificacoes_insert_auth`
@@ -305,21 +306,29 @@ supabase functions serve notificacoes-dispatch --env-file .env.local
 
 ### Passo 7) Configurar OneSignal Web Push + Service Workers
 
-Para GitHub Pages, confirme que os workers estão publicados na raiz do site:
+Para GitHub Pages em repositório de projeto (`https://SEU_USUARIO.github.io/SEU_REPO`), os workers DEVEM existir no caminho do projeto:
 
-- `/OneSignalSDKWorker.js`
-- `/OneSignalSDKUpdaterWorker.js`
+- `/SEU_REPO/OneSignalSDKWorker.js`
+- `/SEU_REPO/OneSignalSDKUpdaterWorker.js`
+- `/SEU_REPO/OneSignalSDK.sw.js` (compatibilidade v16)
 
 Checklist:
 
 1. Os arquivos existem no repositório.
 2. Eles estão sendo enviados no deploy.
-3. A URL final responde `200` (não 404).
+3. As URLs finais respondem `200` (não 404).
 
 Exemplo de teste rápido no navegador:
 - `https://SEU_USUARIO.github.io/SEU_REPO/OneSignalSDKWorker.js`
+- `https://SEU_USUARIO.github.io/SEU_REPO/OneSignalSDK.sw.js`
 
 > Se retornar 404, push em segundo plano não funcionará.
+
+### Ajustes implementados no código (importante)
+
+- O app agora tenta iniciar OneSignal primeiro com `OneSignalSDKWorker.js` e, se falhar, faz fallback para `OneSignalSDK.sw.js`.
+- Existe limpeza automática de Service Workers legados/fora do escopo esperado para reduzir duplicidade em **Application > Service Workers**.
+- O `sw.js` da aplicação é registrado de forma mais defensiva para evitar múltiplos registros desnecessários.
 
 ---
 
@@ -574,3 +583,10 @@ Se encontrar problemas:
 ---
 
 **Parabéns! Seu site romântico está pronto! ❤️**
+
+
+### Correções recentes aplicadas
+
+- Notificações de agenda não repetem mais a cada entrada/reload no mesmo dia (chave local `agenda-browser-<id>-<data>`).
+- Itens criados pelo próprio usuário (por `created_by` ou `created_by_email`) não exibem overlay/botão/alerta para o autor.
+- Filtro de autor usa comparação de email normalizada (trim + lowercase).

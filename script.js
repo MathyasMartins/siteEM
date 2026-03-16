@@ -780,30 +780,44 @@ class OneSignalManager {
     return isGithubPages && projectPath ? `/${projectPath}` : '';
   }
 
+  getWorkerConfig(preferCompatWorker = true) {
+    const basePath = this.getBasePath();
+    const workerScope = `${basePath || ''}/`;
+
+    return {
+      basePath,
+      workerScope,
+      workerPath: `${basePath}/OneSignalSDK${preferCompatWorker ? 'Worker' : '.sw'}.js`,
+      updaterWorkerPath: `${basePath}/OneSignalSDKUpdaterWorker.js`
+    };
+  }
+
+  async initWithConfig(OneSignal, config) {
+    await OneSignal.init({
+      appId: ONE_SIGNAL_APP_ID,
+      serviceWorkerPath: config.workerPath,
+      serviceWorkerUpdaterPath: config.updaterWorkerPath,
+      path: config.basePath || '/',
+      serviceWorkerParam: { scope: config.workerScope },
+      notifyButton: { enable: true },
+      allowLocalhostAsSecureOrigin: true
+    });
+  }
+
   async init() {
     if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
 
-    const basePath = this.getBasePath();
-    const workerPath = `${basePath}/OneSignalSDK.sw.js`;
-    const updaterWorkerPath = `${basePath}/OneSignalSDKUpdaterWorker.js`;
-    const workerScope = `${basePath}/`;
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register(workerPath, { scope: workerScope })
-        .then(() => console.log('OneSignal Worker registrado em:', workerPath))
-        .catch((error) => console.error('Erro ao registrar OneSignal Worker:', error));
-    }
-
     window.OneSignalDeferred.push(async (OneSignal) => {
-      await OneSignal.init({
-        appId: ONE_SIGNAL_APP_ID,
-        serviceWorkerPath: workerPath,
-        serviceWorkerUpdaterPath: updaterWorkerPath,
-        path: workerScope,
-        serviceWorkerParam: { scope: workerScope },
-        notifyButton: { enable: true },
-        allowLocalhostAsSecureOrigin: true
-      });
+      const primaryConfig = this.getWorkerConfig(true);
+      const fallbackConfig = this.getWorkerConfig(false);
+
+      try {
+        await this.initWithConfig(OneSignal, primaryConfig);
+      } catch (error) {
+        console.warn('Falha ao iniciar OneSignal com worker compatível, tentando fallback:', error);
+        await this.initWithConfig(OneSignal, fallbackConfig);
+      }
+
       this.ready = true;
       const user = authManager.getUser();
       if (user?.id) {
@@ -842,14 +856,27 @@ class NotificationManager {
     this.realtimeClient = null;
   }
 
+  normalizeEmail(email) {
+    return String(email || '').trim().toLowerCase();
+  }
+
+  normalizeReferenceId(referenciaId) {
+    if (!referenciaId) return null;
+    const value = String(referenciaId).trim();
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(value) ? value : null;
+  }
+
   async getRecipientEmails(authorEmail) {
     const emails = await supabaseApi.getUsuariosEmails();
     const unique = [...new Set(emails)];
-    return unique.filter((email) => email && email !== authorEmail);
+    const author = this.normalizeEmail(authorEmail);
+    return unique.filter((email) => email && this.normalizeEmail(email) !== author);
   }
 
   async createNotification({ tipo, mensagem, autorEmail, referenciaId = null }) {
     const recipients = await this.getRecipientEmails(autorEmail);
+    const normalizedReferenceId = this.normalizeReferenceId(referenciaId);
 
     if (recipients.length === 0) {
       const notification = await supabaseApi.createNotification({
@@ -857,7 +884,7 @@ class NotificationManager {
         mensagem,
         autor_email: autorEmail,
         destino_email: null,
-        referencia_id: referenciaId ? String(referenciaId) : null,
+        referencia_id: normalizedReferenceId,
         lida: false
       });
 
@@ -874,7 +901,7 @@ class NotificationManager {
         mensagem,
         autor_email: autorEmail,
         destino_email: destinoEmail,
-        referencia_id: referenciaId ? String(referenciaId) : null,
+        referencia_id: normalizedReferenceId,
         lida: false
       });
 
@@ -1059,12 +1086,50 @@ const notificationManager = new NotificationManager();
 // SERVICE WORKER REGISTRATION (PWA)
 // ============================================================================
 
+async function cleanupLegacyServiceWorkers() {
+  if (!('serviceWorker' in navigator)) return;
+
+  const basePath = oneSignalManager.getBasePath();
+  const allowedScripts = new Set([
+    `${basePath}/sw.js`,
+    `${basePath}/OneSignalSDKWorker.js`,
+    `${basePath}/OneSignalSDK.sw.js`,
+    `${basePath}/OneSignalSDKUpdaterWorker.js`
+  ]);
+
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  for (const registration of registrations) {
+    const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || '';
+    const path = scriptUrl ? new URL(scriptUrl).pathname : '';
+    const isOneSignalOrApp = path.includes('OneSignalSDK') || path.endsWith('/sw.js');
+    if (isOneSignalOrApp && !allowedScripts.has(path)) {
+      await registration.unregister();
+    }
+  }
+}
+
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+  window.addEventListener('load', async () => {
     const basePath = oneSignalManager.getBasePath();
-    navigator.serviceWorker.register(`${basePath}/sw.js`)
-      .then(registration => console.log('Service Worker registrado:', registration))
-      .catch(error => console.log('Erro ao registrar Service Worker:', error));
+
+    try {
+      await cleanupLegacyServiceWorkers();
+    } catch (error) {
+      console.warn('Não foi possível limpar service workers antigos:', error);
+    }
+
+    try {
+      const swPath = `${basePath}/sw.js`;
+      const existing = await navigator.serviceWorker.getRegistration(`${basePath || '/'}`);
+      const existingPath = existing?.active?.scriptURL ? new URL(existing.active.scriptURL).pathname : '';
+
+      if (!existing || existingPath !== swPath) {
+        const registration = await navigator.serviceWorker.register(swPath, { scope: `${basePath || ''}/` });
+        console.log('Service Worker registrado:', registration);
+      }
+    } catch (error) {
+      console.log('Erro ao registrar Service Worker:', error);
+    }
   });
 }
 
