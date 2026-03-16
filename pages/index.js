@@ -247,21 +247,28 @@ async function checkMeetingNotification() {
 async function checkTodayAgendaNotifications() {
   const agenda = await supabaseApi.getAgenda();
   const hoje = DateUtils.toISODate(new Date());
+  const user = authManager.getUser();
 
   for (const item of agenda.filter((entry) => DateUtils.toISODate(entry.data) === hoje)) {
+    if (isCreator(item, user)) continue;
+
     const localKey = `agenda-arrival-${item.id}-${hoje}`;
+    const browserLocalKey = `agenda-browser-${item.id}-${hoje}`;
 
     if (!localStorage.getItem(localKey)) {
       await notificationManager.createNotification({
         tipo: 'agenda',
         mensagem: `Hoje é o dia de "${item.titulo}" 🎉`,
-        autorEmail: null,
+        autorEmail: item.created_by_email || null,
         referenciaId: item.id
       });
       localStorage.setItem(localKey, '1');
     }
 
-    oneSignalManager.notifyOnce(`agenda-${item.id}-${hoje}`, 'Data especial chegou 🎉', item.titulo);
+    if (!localStorage.getItem(browserLocalKey)) {
+      oneSignalManager.notifyOnce(`agenda-${item.id}-${hoje}`, 'Data especial chegou 🎉', item.titulo);
+      localStorage.setItem(browserLocalKey, '1');
+    }
   }
 }
 
@@ -270,7 +277,7 @@ async function renderSurpriseFloatingButton() {
   const hoje = DateUtils.toISODate(new Date());
   const user = authManager.getUser();
 
-  const surpresa = surpresas.find((item) => item.data === hoje && item.created_by !== user?.id);
+  const surpresa = surpresas.find((item) => DateUtils.toISODate(item.data) === hoje && !isCreator(item, user));
   if (!surpresa) return;
 
   const container = document.createElement('div');
@@ -288,9 +295,20 @@ function getAgendaCreatorKey(item) {
   return item?.created_by || item?.created_by_email || null;
 }
 
-function shouldHideSpecialFromCreator(item, user) {
+
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isCreator(item, user) {
   if (!item || !user) return false;
-  return item.created_by === user.id || item.created_by_email === user.email;
+  const sameId = item.created_by && user.id && item.created_by === user.id;
+  const sameEmail = normalizeEmail(item.created_by_email) && normalizeEmail(user.email) && normalizeEmail(item.created_by_email) === normalizeEmail(user.email);
+  return Boolean(sameId || sameEmail);
+}
+
+function shouldHideSpecialFromCreator(item, user) {
+  return isCreator(item, user);
 }
 
 function buildSpecialOverlayHtml(title, message) {
