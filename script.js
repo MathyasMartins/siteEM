@@ -780,43 +780,33 @@ class OneSignalManager {
     return isGithubPages && projectPath ? `/${projectPath}` : '';
   }
 
-  getWorkerConfig(preferCompatWorker = true) {
+  getWorkerConfig() {
     const basePath = this.getBasePath();
     const workerScope = `${basePath || ''}/`;
 
     return {
       basePath,
       workerScope,
-      workerPath: `${basePath}/OneSignalSDK${preferCompatWorker ? 'Worker' : '.sw'}.js`,
+      workerPath: `${basePath}/OneSignalSDKWorker.js`,
       updaterWorkerPath: `${basePath}/OneSignalSDKUpdaterWorker.js`
     };
-  }
-
-  async initWithConfig(OneSignal, config) {
-    await OneSignal.init({
-      appId: ONE_SIGNAL_APP_ID,
-      serviceWorkerPath: config.workerPath,
-      serviceWorkerUpdaterPath: config.updaterWorkerPath,
-      path: config.basePath || '/',
-      serviceWorkerParam: { scope: config.workerScope },
-      notifyButton: { enable: true },
-      allowLocalhostAsSecureOrigin: true
-    });
   }
 
   async init() {
     if (!window.OneSignalDeferred) window.OneSignalDeferred = [];
 
     window.OneSignalDeferred.push(async (OneSignal) => {
-      const primaryConfig = this.getWorkerConfig(true);
-      const fallbackConfig = this.getWorkerConfig(false);
+      const config = this.getWorkerConfig();
 
-      try {
-        await this.initWithConfig(OneSignal, primaryConfig);
-      } catch (error) {
-        console.warn('Falha ao iniciar OneSignal com worker compatível, tentando fallback:', error);
-        await this.initWithConfig(OneSignal, fallbackConfig);
-      }
+      await OneSignal.init({
+        appId: ONE_SIGNAL_APP_ID,
+        serviceWorkerPath: config.workerPath,
+        serviceWorkerUpdaterPath: config.updaterWorkerPath,
+        path: config.workerScope,
+        serviceWorkerParam: { scope: config.workerScope },
+        notifyButton: { enable: true },
+        allowLocalhostAsSecureOrigin: true
+      });
 
       this.ready = true;
       const user = authManager.getUser();
@@ -1093,7 +1083,6 @@ async function cleanupLegacyServiceWorkers() {
   const allowedScripts = new Set([
     `${basePath}/sw.js`,
     `${basePath}/OneSignalSDKWorker.js`,
-    `${basePath}/OneSignalSDK.sw.js`,
     `${basePath}/OneSignalSDKUpdaterWorker.js`
   ]);
 
@@ -1130,6 +1119,12 @@ if ('serviceWorker' in navigator) {
     } catch (error) {
       console.log('Erro ao registrar Service Worker:', error);
     }
+
+    try {
+      await oneSignalManager.init();
+    } catch (error) {
+      console.warn('Falha ao inicializar OneSignal:', error);
+    }
   });
 }
 
@@ -1137,7 +1132,6 @@ if ('Notification' in window && Notification.permission === 'default') {
   Notification.requestPermission().catch(() => null);
 }
 
-oneSignalManager.init();
 notificationManager.initRealtime();
 
 function ensureAuthenticated() {

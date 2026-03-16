@@ -310,7 +310,6 @@ Para GitHub Pages em repositório de projeto (`https://SEU_USUARIO.github.io/SEU
 
 - `/SEU_REPO/OneSignalSDKWorker.js`
 - `/SEU_REPO/OneSignalSDKUpdaterWorker.js`
-- `/SEU_REPO/OneSignalSDK.sw.js` (compatibilidade v16)
 
 Checklist:
 
@@ -326,7 +325,7 @@ Exemplo de teste rápido no navegador:
 
 ### Ajustes implementados no código (importante)
 
-- O app agora tenta iniciar OneSignal primeiro com `OneSignalSDKWorker.js` e, se falhar, faz fallback para `OneSignalSDK.sw.js`.
+- O app inicializa OneSignal usando `OneSignalSDKWorker.js` e `OneSignalSDKUpdaterWorker.js` no escopo do projeto (com barra final no path).
 - Existe limpeza automática de Service Workers legados/fora do escopo esperado para reduzir duplicidade em **Application > Service Workers**.
 - O `sw.js` da aplicação é registrado de forma mais defensiva para evitar múltiplos registros desnecessários.
 
