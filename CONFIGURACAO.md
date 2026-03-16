@@ -319,6 +319,7 @@ Checklist:
 
 Exemplo de teste rápido no navegador:
 - `https://SEU_USUARIO.github.io/SEU_REPO/OneSignalSDKWorker.js`
+- `https://SEU_USUARIO.github.io/SEU_REPO/OneSignalSDK.sw.js`
 
 > Se retornar 404, push em segundo plano não funcionará.
 
