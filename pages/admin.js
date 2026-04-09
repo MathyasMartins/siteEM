@@ -64,6 +64,7 @@ function setupLoginForm() {
     <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">Entrar</button>
   `;
   
+  
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const password = document.getElementById('adminPassword').value;
